@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { Request, Response } from 'express'
 import dbConnection from './db/connection';
 // import cors from "cors";
+import routers from "./routes/index"
 
 dbConnection();
 
@@ -20,6 +21,10 @@ app.use(express.urlencoded({ extended: true }))
 
 app.get("/",async (req:any,res:any)=>{
     return res.send("server is running")
+})
+
+routers.map(route=>{
+    app.use(route.path,route.handler)
 })
 
 

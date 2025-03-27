@@ -19,6 +19,7 @@ const app = (0, express_1.default)();
 const morgan_1 = __importDefault(require("morgan"));
 const connection_1 = __importDefault(require("./db/connection"));
 // import cors from "cors";
+const index_1 = __importDefault(require("./routes/index"));
 (0, connection_1.default)();
 // app.use(cors())
 app.use((0, morgan_1.default)('dev'));
@@ -27,4 +28,7 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     return res.send("server is running");
 }));
+index_1.default.map(route => {
+    app.use(route.path, route.handler);
+});
 exports.default = app;

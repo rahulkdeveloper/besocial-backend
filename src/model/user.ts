@@ -9,8 +9,7 @@ enum Gender{
 
 // Interface for User Document
 export interface IUser extends Document {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   password: string;
   dateOfBirth?: Date; // Optional field
@@ -22,19 +21,17 @@ export interface IUser extends Document {
   gender:Gender;
   bio:string;
   lastSeen:Date;
+  lastLoginAt:Date;
   status:"online"|"offline";
   resetPasswotdToken:string;
   blockedUsers:mongoose.Types.ObjectId;
+  resetPasswordToken:string;
 }
 
 // Define the User Schema
 const UserSchema: Schema<IUser> = new Schema(
   {
-    firstName: {
-      type: String,
-      required: true,
-    },
-    lastName: {
+    fullName: {
       type: String,
       required: true,
     },
@@ -87,6 +84,12 @@ const UserSchema: Schema<IUser> = new Schema(
         ref: 'User',
       },
     ],
+    lastLoginAt:{
+      type:Date
+    },
+    resetPasswordToken:{
+      type:String
+    }
 
   },
   {

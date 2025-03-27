@@ -34,78 +34,28 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-var Gender;
-(function (Gender) {
-    Gender["male"] = "male";
-    Gender["female"] = "female";
-    Gender["other"] = "other";
-})(Gender || (Gender = {}));
 // Define the User Schema
-const UserSchema = new mongoose_1.Schema({
-    fullName: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true,
-    },
-    password: {
-        type: String,
-        required: true,
-    },
-    dateOfBirth: {
-        type: Date,
-        required: false,
-    },
-    profileImage: {
-        type: String,
-        required: false,
-    },
-    phone: {
-        type: String,
-        required: true
-    },
-    gender: {
-        type: String,
-        enum: Object.values(Gender),
-        required: true, // If gender is required, set this to true
-    },
-    bio: {
-        type: String,
-        required: true
-    },
-    lastSeen: {
-        type: Date
-    },
+const ContactSchema = new mongoose_1.Schema({
     status: {
         type: String,
-        enum: ["offline", "online"],
-        default: "offline"
+        enum: ["pending", "accepted", "rejected", "blocked"],
+        default: "pending",
+        required: true
     },
-    resetPasswotdToken: {
-        type: String
+    sender: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: 'User', // Reference to the 'User' model
+        required: true,
     },
-    blockedUsers: [
-        {
-            type: mongoose_1.default.Schema.Types.ObjectId,
-            ref: 'User',
-        },
-    ],
-    lastLoginAt: {
-        type: Date
+    receiver: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: 'User', // Reference to the 'User' model
+        required: true,
     },
-    resetPasswordToken: {
-        type: String
-    }
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
 });
-UserSchema.index({ email: 1 }); // Ascending index on email
-UserSchema.index({ phone: 1 }); // Ascending index on phone
+ContactSchema.index({ sender: 1, receiver: 1 }, { unique: true });
 // Create the User model
-const User = mongoose_1.default.model('User', UserSchema);
-exports.default = User;
+const Contact = mongoose_1.default.model('Contact', ContactSchema);
+exports.default = Contact;
