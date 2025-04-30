@@ -4,8 +4,8 @@
   "description": "besocial backend app",
   "main": "index.js",
   "scripts": {
-    "start": " env-cmd -f .env node build/server.js",
-    "dev": "npx tsc && env-cmd -f .env nodemon  build/server.js",
+    "start": " env-cmd -f .env node build/app.js",
+    "dev": "nodemon",
     "build": "tsc --project tsconfig.json"
   },
   "keywords": [
@@ -31,13 +31,19 @@
     "mongodb": "^6.14.2",
     "mongoose": "^8.12.1",
     "morgan": "^1.10.0",
-    "otp-generator": "^4.0.1"
+    "multer": "^1.4.5-lts.2",
+    "nodemailer": "^6.10.0",
+    "otp-generator": "^4.0.1",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.13.9",
+    "@types/nodemailer": "^6.4.17",
+    "@types/socket.io": "^3.0.2",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
     "eslint": "^8.57.1",

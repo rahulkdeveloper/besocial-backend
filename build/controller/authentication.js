@@ -16,8 +16,10 @@ exports.demo = exports.resetPassword = exports.forgotPassword = exports.login = 
 const user_1 = __importDefault(require("../model/user"));
 const utils_1 = require("../helper/utils");
 const moment_1 = __importDefault(require("moment"));
+const email_1 = require("../helper/email");
+const constant_1 = require("../config/constant");
 const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    let { email, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
+    let { email, username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
         const checkUserWithEmail = yield user_1.default.findOne({ email }).lean();
         if (checkUserWithEmail) {
@@ -38,6 +40,14 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 data: null
             });
         }
+        const checkUserWithUsername = yield user_1.default.findOne({ username }).lean();
+        if (checkUserWithUsername) {
+            return res.status(403).json({
+                success: true,
+                message: "Username already exist!",
+                data: null
+            });
+        }
         let hashPass = yield (0, utils_1.hashPassword)(password);
         const newUserData = {
             email,
@@ -46,7 +56,8 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             phone,
             dateOfBirth,
             gender,
-            bio
+            bio,
+            username
         };
         const newUserRequest = new user_1.default(newUserData);
         const newUser = yield newUserRequest.save();
@@ -160,8 +171,8 @@ const forgotPassword = (req, res) => __awaiter(void 0, void 0, void 0, function*
         user.resetPasswordToken = resetToken;
         yield user.save();
         // Send the reset email to the user
-        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        //   await sendResetPasswordEmail(user.email, resetUrl);
+        const resetUrl = `${process.env.FRONTEND_FORGOT_PASSWORD_URL}?token=${resetToken}`;
+        yield (0, email_1.sendEmailNormal)(email, "Forgot Password link | Besocial", constant_1.emailTemplateName.forgotPassword, { username: user.username, resetUrl: resetUrl });
         return res.status(200).json({ message: 'Password reset email sent successfully.', resetToken });
     }
     catch (error) {

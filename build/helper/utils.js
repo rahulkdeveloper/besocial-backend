@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decode = exports.generateToken = exports.generateAccessToken = exports.comparePassword = exports.hashPassword = void 0;
+exports.decode = exports.generateToken = exports.generateAccessToken = exports.comparePassword = exports.hashPassword = exports.verifyJwtToken = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const base64_url_1 = __importDefault(require("base64-url"));
@@ -33,6 +33,10 @@ const generateAccessToken = (useInfo) => __awaiter(void 0, void 0, void 0, funct
     return jsonwebtoken_1.default.sign(useInfo, process.env.JWT_SECRET_CODE);
 });
 exports.generateAccessToken = generateAccessToken;
+const verifyJwtToken = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET_CODE);
+});
+exports.verifyJwtToken = verifyJwtToken;
 const generateToken = (obj) => __awaiter(void 0, void 0, void 0, function* () {
     let otp = '1234';
     if (process.env.MODE === 'production') {

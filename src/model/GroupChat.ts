@@ -7,8 +7,8 @@ export interface IGroupChat extends Document {
     active:boolean;
     admin:mongoose.Types.ObjectId;
     participants: mongoose.Types.ObjectId[];
-    profileImage:mongoose.Types.ObjectId;
-    isAdminCanSendMessage:boolean
+    groupImage:mongoose.Types.ObjectId;
+    isParticipantsCanSendMessage:boolean
 }
 
 // Define the User Schema
@@ -18,6 +18,7 @@ const GroupChatSchema: Schema<IGroupChat> = new Schema(
             type:String,
             required:true
         },
+
         description:{
             type:String,
             required:true
@@ -32,7 +33,7 @@ const GroupChatSchema: Schema<IGroupChat> = new Schema(
             ref: 'User', // Reference to the 'User' model
             required: true,
         }],
-        profileImage:{
+        groupImage:{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Media', // Reference to the 'User' model
         },
@@ -40,9 +41,9 @@ const GroupChatSchema: Schema<IGroupChat> = new Schema(
             type:Boolean,
             default:true
         },
-        isAdminCanSendMessage:{
+        isParticipantsCanSendMessage:{
             type:Boolean,
-            default:false
+            default:true
         }
 
 

@@ -11,7 +11,8 @@
     "strict": true,                                      /* Enable all strict type-checking options. */
     "skipLibCheck": true       ,
     "allowJs": true,    
-    "typeRoots": ["./types"]                      /* Skip type checking all .d.ts files. */
+    "typeRoots": ["./types"]   ,
+    "baseUrl": ".",                   /* Skip type checking all .d.ts files. */
   },
   "include": ["src"],
   "exclude": ["build","node_modules"]

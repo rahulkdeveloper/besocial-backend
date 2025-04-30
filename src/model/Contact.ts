@@ -3,30 +3,30 @@ import mongoose, { Schema, Document } from 'mongoose';
 // Interface for User Document
 export interface IContact extends Document {
     sender: mongoose.Types.ObjectId;
-    receiver:mongoose.Types.ObjectId;
-    status:"pending"|"accepted"|"rejected"|"blocked"
+    receiver: mongoose.Types.ObjectId;
+    status: "pending" | "accepted" | "rejected" | "blocked",
+
 }
 
 // Define the User Schema
 const ContactSchema: Schema<IContact> = new Schema(
     {
-        status:{
-            type:String,
+        status: {
+            type: String,
             enum: ["pending", "accepted", "rejected", "blocked"],
-            default:"pending",
-            required:true
+            default: "pending",
+            required: true
         },
-        sender:{
+        sender: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User', // Reference to the 'User' model
+            ref: 'User',
             required: true,
         },
         receiver: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User', // Reference to the 'User' model
+            ref: 'User',
             required: true,
         },
-
 
     },
     {

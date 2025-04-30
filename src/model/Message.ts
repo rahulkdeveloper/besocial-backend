@@ -9,10 +9,12 @@ export interface IMessage extends Document {
     type:"text"|"audio"|"video"|"image"|"video"|"file";
     content:string;
     file:mongoose.Types.ObjectId;
+    fileText:string;
     seen:boolean;
     seenBy:mongoose.Types.ObjectId[];
     isDeleted:boolean;
     isEdited:boolean;
+    isBlocked:boolean;
 }
 
 // Define the User Schema
@@ -31,7 +33,6 @@ const MessageSchema: Schema<IMessage> = new Schema(
         
         content:{
             type:String,
-            required:true
         },
         chatRoomId:{
             type: mongoose.Schema.Types.ObjectId,
@@ -40,11 +41,10 @@ const MessageSchema: Schema<IMessage> = new Schema(
         group:{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'GroupChat', 
-            required: true,
         },
         type:{
             type:String,
-            enum:["text","audio","video","image","video","file"],
+            enum:["text","audio","video","image","file"],
             default:"text"
         },
         seenBy: [{
@@ -56,6 +56,10 @@ const MessageSchema: Schema<IMessage> = new Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Media',
         },
+        fileText:{
+            type:String
+        },
+
         seen:{
             type:Boolean,
             default:false
@@ -67,7 +71,12 @@ const MessageSchema: Schema<IMessage> = new Schema(
         isDeleted:{
             type:Boolean,
             default:false
-        }
+        },
+        isBlocked:{
+            type:Boolean,
+            default:false
+        },
+        
 
 
     },

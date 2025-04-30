@@ -1,13 +1,15 @@
 import { Request, Response, NextFunction } from "express";
 import UserModel, { IUser } from "../model/user";
 import { generateAccessToken, hashPassword, comparePassword, generateToken,decode } from "../helper/utils"
-import moment from "moment"
-
+import moment from "moment";
+import {sendEmailNormal} from "../helper/email";
+import {emailTemplateName} from "../config/constant";
+import {createUserSetting} from "../service/user.serivce"
 
 
 export const signUp = async (req: any, res: any) => {
-
-    let { email, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
+ 
+    let { email,username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
         const checkUserWithEmail = await UserModel.findOne({ email }).lean();
 
@@ -33,6 +35,16 @@ export const signUp = async (req: any, res: any) => {
             });
         }
 
+        const checkUserWithUsername = await UserModel.findOne({ username }).lean();
+
+        if (checkUserWithUsername) {
+            return res.status(403).json({
+                success: true,
+                message: "Username already exist!",
+                data: null
+            });
+        }
+
         let hashPass = await hashPassword(password);
 
         const newUserData = {
@@ -42,7 +54,8 @@ export const signUp = async (req: any, res: any) => {
             phone,
             dateOfBirth,
             gender,
-            bio
+            bio,
+            username
         };
 
         const newUserRequest = new UserModel(newUserData);
@@ -57,6 +70,10 @@ export const signUp = async (req: any, res: any) => {
             });
         }
 
+        // create user settings
+        const userSettings = await createUserSetting(newUser._id,{});
+
+
         // generate accessToken;
         const token = await generateAccessToken({ _id: newUser._id, email: newUser.email });
 
@@ -65,6 +82,7 @@ export const signUp = async (req: any, res: any) => {
             message: "Signup successfully!",
             data: {
                 user: newUser,
+                userSettings:userSettings,
                 token
             }
         });
@@ -171,8 +189,10 @@ export const forgotPassword = async (req: any, res: any) => {
         await user.save();
 
         // Send the reset email to the user
-        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        //   await sendResetPasswordEmail(user.email, resetUrl);
+        const resetUrl = `${process.env.FRONTEND_FORGOT_PASSWORD_URL}?token=${resetToken}`;
+        
+
+        await sendEmailNormal(email,"Forgot Password link | Besocial",emailTemplateName.forgotPassword,{username:user.username,resetUrl:resetUrl})
 
         return res.status(200).json({ message: 'Password reset email sent successfully.',resetToken });
     } catch (error) {

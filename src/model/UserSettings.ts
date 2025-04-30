@@ -8,6 +8,7 @@ export interface IUserSetting extends Document {
     isProfileImageShow: boolean,
     isLastSeenShow: boolean,
     isOnlineShow: boolean,
+    isAccountPrivate:boolean,
     theme:"light"|"dark"
 }
 
@@ -16,7 +17,7 @@ const UserSettingSchema: Schema<IUserSetting> = new Schema(
     {
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User', // Reference to the 'User' model
+            ref: 'User',
             required: true,
         },
         notification:{
@@ -35,6 +36,10 @@ const UserSettingSchema: Schema<IUserSetting> = new Schema(
             type:Boolean,
             default:true
         },
+        isAccountPrivate:{
+            type:Boolean,
+            default:false
+        },
         theme:{
             type:String,
             enum:["light","dark"],
@@ -43,7 +48,7 @@ const UserSettingSchema: Schema<IUserSetting> = new Schema(
 
     },
     {
-        timestamps: true, // Automatically adds createdAt and updatedAt fields
+        timestamps: true,
     }
 );
 

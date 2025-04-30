@@ -38,7 +38,7 @@ const mongoose_1 = __importStar(require("mongoose"));
 const UserSettingSchema = new mongoose_1.Schema({
     user: {
         type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'User', // Reference to the 'User' model
+        ref: 'User',
         required: true,
     },
     notification: {
@@ -63,7 +63,7 @@ const UserSettingSchema = new mongoose_1.Schema({
         default: "light"
     }
 }, {
-    timestamps: true, // Automatically adds createdAt and updatedAt fields
+    timestamps: true,
 });
 // Create the User model
 const UserSetting = mongoose_1.default.model('UserSetting', UserSettingSchema);

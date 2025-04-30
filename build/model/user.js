@@ -46,6 +46,13 @@ const UserSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true,
+    },
     email: {
         type: String,
         required: true,
@@ -100,6 +107,17 @@ const UserSchema = new mongoose_1.Schema({
     },
     resetPasswordToken: {
         type: String
+    },
+    socketId: {
+        type: String
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
+    isAccountActive: {
+        type: Boolean,
+        default: true
     }
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields

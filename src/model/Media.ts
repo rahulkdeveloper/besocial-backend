@@ -9,7 +9,9 @@ export interface IMedia extends Document {
     name: String,
     folderName:String,
     alt?:string,
-    mimeType:string
+    mimeType:string,
+    path?:string,
+    filename?:string,
 }
 
 // Define the User Schema
@@ -29,6 +31,9 @@ const MediaSchema: Schema<IMedia> = new Schema(
             type:String,
             required:true
         },
+        path:{
+            type:String,
+        },
         size:{
             type:String,
             required:true
@@ -45,6 +50,9 @@ const MediaSchema: Schema<IMedia> = new Schema(
             type:String
         },
         mimeType:{
+            type:String
+        },
+        filename:{
             type:String
         }
 

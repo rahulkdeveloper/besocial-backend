@@ -47,7 +47,7 @@ const ChatRoomSchema = new mongoose_1.Schema({
     },
     blocked: {
         type: Boolean,
-        default: true
+        default: false
     },
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
