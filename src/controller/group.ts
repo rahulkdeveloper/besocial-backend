@@ -1,4 +1,6 @@
 import GroupChatModel from "src/model/GroupChat";
+import UserModel from "src/model/user";
+import ChatRoomModel from "src/model/Room";
 const IsProduction = process.env.NODE_ENV as string === 'production';
 
 
@@ -24,7 +26,25 @@ export const createGroup = async (req: any, res: any) => {
             });
         }
 
-        participants = [...participants, admin]
+        // check all users friend of current Users;
+
+        if (participants.length > 0) {
+            participants = await Promise.all(participants.map(async (participant: any) => {
+
+                const chatroomExist = await ChatRoomModel.findOne(
+                    { participants: {$all:[currentUserId,participant]} }
+                ).
+                populate("participants","name email")
+
+
+                if (chatroomExist) {
+                    return participant
+                }
+            }))
+        }
+        participants = [...participants, admin];
+
+        participants =  participants.filter((n:any)=>n)
 
         const groupChatData: any = {
             name,
@@ -36,9 +56,6 @@ export const createGroup = async (req: any, res: any) => {
         if (groupImage) {
             groupChatData.groupImage = groupImage
         }
-
-        // check all users friend of current Users;
-
 
         const newGroup = await GroupChatModel.create(groupChatData);
 
