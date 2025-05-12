@@ -5,10 +5,11 @@ const app = express();
 import morgan from "morgan";
 import { Request, Response } from 'express'
 import dbConnection from './db/connection';
-// import cors from "cors";
+import cors from "cors";
 import routers from "./routes/index"
 import socketIo from "socket.io";
 import http from "http";
+import path from 'path';
 import {updateSocketId} from "./service/user.serivce"
 
 dbConnection();
@@ -52,13 +53,13 @@ io.on('connection', async(socket:any) => {
 
 
 
-// app.use(cors())
+app.use(cors())
 
 app.use(morgan('dev'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
-
+app.use('/uploads', express.static(path.join(__dirname,'..', 'uploads')));
 
 app.get("/", async (req: any, res: any) => {
     return res.send("server is running")

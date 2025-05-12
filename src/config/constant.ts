@@ -17,4 +17,4 @@ export const notificationContent = {
     },
 }
 
-export const mediaTypes = ["text","audio","video","image","file"];
+export const mediaTypes = ["audio","video","image","file"];

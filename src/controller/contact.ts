@@ -214,6 +214,7 @@ export const listContactRequest = async (req: any, res: any) => {
 
     let { status = "pending", limit, page } = req.query;
     try {
+        console.log("status::",status)
 
         const currentUserId = req.user._id;
 
@@ -229,7 +230,21 @@ export const listContactRequest = async (req: any, res: any) => {
             .limit(limit)
             .skip(skip)
             .sort({ createdAt: -1 })
-            .populate("sender", "_id email username fullName");
+            // .populate("sender", "_id email username fullName")
+            .populate({
+                path: "sender",
+                select: {
+                    _id: 1,
+                    email: 1,
+                    username: 1,
+                    fullName: 1,
+                    profileImage:1
+                },
+                populate: {
+                    path: "profileImage",
+                    select:fileModelFieldSelection,
+                }
+            })
 
         const totalResut = await ContactModel.countDocuments({
             receiver: currentUserId,
@@ -270,7 +285,7 @@ export const listContactRequest = async (req: any, res: any) => {
 
 export const myFriends = async (req: any, res: any) => {
 
-    let { limit, page,search='' } = req.query;
+    let { limit, page, search = '' } = req.query;
     try {
 
         const currentUserId = req.user._id;
@@ -284,7 +299,7 @@ export const myFriends = async (req: any, res: any) => {
 
         const skip = (page - 1) * limit;
 
-        let searchQuery={};
+        let searchQuery = {};
 
         if (search) {
             let regex = {
@@ -367,7 +382,7 @@ export const myFriends = async (req: any, res: any) => {
                     }
                 }
             },
-            
+
             {
                 $lookup: {
                     from: "usersettings",
@@ -382,7 +397,7 @@ export const myFriends = async (req: any, res: any) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
-            
+
             {
                 $lookup: {
                     from: "media",
@@ -426,8 +441,8 @@ export const myFriends = async (req: any, res: any) => {
         const list = await ContactModel.aggregate(pipeline);
         const result = await ContactModel.aggregate(countPipeline);
 
-        console.log("result::",result);
-        console.log("list::",list)
+        console.log("result::", result);
+        console.log("list::", list)
 
         const total: any = result[0]?.total || 0;
         const totalPages = Math.ceil(total / limit)

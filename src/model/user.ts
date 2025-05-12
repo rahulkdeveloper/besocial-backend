@@ -30,6 +30,7 @@ export interface IUser extends Document {
   isDeleted: boolean;
   isAccountActive: boolean;
   blockedByAdmin:boolean;
+  isOnBoardCompleted:boolean;
 }
 
 // Define the User Schema
@@ -67,7 +68,7 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     phone: {
       type: String,
-      required: true
+      // required: true
     },
     gender: {
       type: String,
@@ -76,7 +77,6 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     bio: {
       type: String,
-      required: true
     },
     lastSeen: {
       type: Date
@@ -110,6 +110,10 @@ const UserSchema: Schema<IUser> = new Schema(
       default: true
     },
     blockedByAdmin: {
+      type: Boolean,
+      default: false
+    },
+    isOnBoardCompleted: {
       type: Boolean,
       default: false
     }

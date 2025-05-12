@@ -51,7 +51,7 @@ export const userList = async (req: any, res: any) => {
             const currentDate = new Date();
             const filterDate = new Date(currentDate.setFullYear(currentDate.getFullYear() - minAge));
 
-            console.log("filterDate::",filterDate)
+            console.log("filterDate::", filterDate)
 
             pipeline.push({
                 $match: {
@@ -73,14 +73,15 @@ export const userList = async (req: any, res: any) => {
         }
 
 
-        pipeline.push({
-            $lookup: {
-                from: "users",
-                localField: "blockedUsers",
-                foreignField: "_id",
-                as: "blockedUsers"
-            }
-        },
+        pipeline.push(
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "blockedUsers",
+                    foreignField: "_id",
+                    as: "blockedUsers"
+                }
+            },
             {
                 $lookup: {
                     from: "media",
@@ -95,6 +96,81 @@ export const userList = async (req: any, res: any) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
+            {
+                $lookup: {
+                    from: "contacts",
+                    let: {
+                        currentUserId: new mongoose.Types.ObjectId(userId),
+                        userId: "$_id",
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $or: [
+                                        {
+                                            $and: [
+                                                { $eq: ["$sender", "$$userId"] },
+                                                { $eq: ["$receiver", "$$currentUserId"] },
+                                                { $ne: ["$status", "rejected"] }
+                                            ]
+                                        },
+                                        {
+                                            $and: [
+                                                { $eq: ["$sender", "$$currentUserId"] },
+                                                { $eq: ["$receiver", "$$userId"] },
+                                                { $ne: ["$status", "rejected"] }
+                                            ]
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "userContacts"
+                }
+            },
+            {
+                $addFields: {
+                  contactStatus: {
+                    $let: {
+                      vars: {
+                        contact: { $arrayElemAt: ["$userContacts", 0] }
+                      },
+                      in: {
+                        $switch: {
+                          branches: [
+                            {
+                              case: { $eq: ["$$contact.status", "accepted"] },
+                              then: "friend"
+                            },
+                            {
+                              case: {
+                                $and: [
+                                  { $eq: ["$$contact.status", "pending"] },
+                                  { $eq: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
+                                ]
+                              },
+                              then: "pending"
+                            },
+                            {
+                              case: {
+                                $and: [
+                                  { $eq: ["$$contact.status", "pending"] },
+                                  { $ne: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
+                                ]
+                              },
+                              then: "Received"
+                            }
+                          ],
+                          default: "unknown"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              ,
             {
                 $lookup: {
                     from: "usersettings",
@@ -126,7 +202,7 @@ export const userList = async (req: any, res: any) => {
         pipeline.push({ $skip: skip }, { $limit: limit });
 
         pipeline.push({
-            $project: userFieldSelection
+            $project: { ...userFieldSelection,userContacts: { $arrayElemAt: ["$userContacts", 0] }, contactStatus: 1 }
         })
 
 
@@ -243,7 +319,7 @@ export const updateProfile = async (req: any, res: any) => {
     try {
         const currentUserId = req.user._id;
 
-        let { fullName, dateOfBirth, phone, gender, bio, profileImage } = req.body;
+        let { fullName, dateOfBirth, phone, gender, bio, profileImage, isOnBoardCompleted } = req.body;
 
         let updateQuery = {
             ...(fullName && { fullName }),
@@ -251,6 +327,7 @@ export const updateProfile = async (req: any, res: any) => {
             ...(phone && { phone }),
             ...(gender && { gender }),
             ...(bio && { bio }),
+            ...(isOnBoardCompleted === true && { isOnBoardCompleted: true }),
             ...(profileImage && { profileImage: new mongoose.Types.ObjectId(profileImage) }),
         }
 
@@ -259,7 +336,7 @@ export const updateProfile = async (req: any, res: any) => {
             updateQuery,
             {
                 new: true,
-                select: "_id fullName username email dateOfBirth phone gender bio status profileImage"
+                select: "_id fullName username email dateOfBirth phone gender bio status profileImage isOnBoardCompleted"
             }
         )
 

@@ -8,6 +8,7 @@ import { messageDetail, messageFieldSelection } from '../service/chatMessage.ser
 import mongoose from "mongoose";
 import { mediaTypes } from '../config/constant'
 import UserModel from "src/model/user";
+import GroupChatModel from "src/model/GroupChat";
 
 const IsProduction = process.env.NODE_ENV as string === 'production';
 
@@ -83,10 +84,10 @@ export const sendMessage = async (req: any, res: any) => {
 
         // check someone deleted his chatroom now active;
 
-        if(chatroom.deletedBy.length>0 && newMessage){
+        if (chatroom.deletedBy.length > 0 && newMessage) {
             await ChatRoomModel.findOneAndUpdate(
-                {_id:chatroom._id},
-                {deletedBy:[]}
+                { _id: chatroom._id },
+                { deletedBy: [] }
             )
         }
 
@@ -192,8 +193,6 @@ export const chatroomById = async (req: any, res: any) => {
                 $or: [
                     { isBlocked: false },
                     { isBlocked: true, sender: currentUserId },
-                    // {"messageClearStatus.userId":{$ne:currentUserId}},
-                    // {"messageClearStatus.userId":currentUserId,"messageClearStatus.clearedAt":{$lt:new Date()}}
                 ],
 
                 ...(ChatCleared && { createdAt: { $gt: chatClearedDate } })
@@ -230,7 +229,15 @@ export const chatroomById = async (req: any, res: any) => {
                 }
             ])
 
-        const totalMessage = await MessageModel.countDocuments({ chatRoomId: chatroom._id, isDeleted: false }) || 0
+        const totalMessage = await MessageModel.countDocuments({
+            chatRoomId: chatroom._id,
+            $or: [
+                { isBlocked: false },
+                { isBlocked: true, sender: currentUserId },
+            ],
+
+            ...(ChatCleared && { createdAt: { $gt: chatClearedDate } })
+        }) || 0
 
 
         chatroom.messages = messages || [];
@@ -273,6 +280,7 @@ export const allChatrooms = async (req: any, res: any) => {
 
         let searchQuery = {};
         let matchQuery = {};
+        let groupSearchQuery = {};
 
         if (unread === 'true') {
             matchQuery = { "unreadMessageCount": { $gt: 0 } }
@@ -289,14 +297,22 @@ export const allChatrooms = async (req: any, res: any) => {
                     { "friend.username": regex }
                 ]
             }
+
+            groupSearchQuery = {
+                $or: [
+                    { "name": regex },
+                    { "description": regex }
+                ]
+            }
         }
+
 
         if (favourites === 'true') {
             searchQuery = { ...searchQuery, 'favouriteBy._id': new mongoose.Types.ObjectId(currentUserId) }
         }
 
-        const chatrooms = await ChatRoomModel.aggregate([
-            { $match: { participants: new mongoose.Types.ObjectId(currentUserId),deletedBy:{$ne:new mongoose.Types.ObjectId(currentUserId)}} },
+        let chatrooms = await ChatRoomModel.aggregate([
+            { $match: { participants: new mongoose.Types.ObjectId(currentUserId), deletedBy: { $ne: new mongoose.Types.ObjectId(currentUserId) } } },
             {
                 $lookup: {
                     from: "users",
@@ -482,8 +498,8 @@ export const allChatrooms = async (req: any, res: any) => {
                 }
             },
             { $sort: { "currentMessage.createdAt": -1 } },
-            { $skip: skip },
-            { $limit: limit },
+            // { $skip: skip },
+            // { $limit: limit },
             {
                 $project: {
                     _id: 1,
@@ -499,12 +515,194 @@ export const allChatrooms = async (req: any, res: any) => {
             }
         ])
 
+        chatrooms = chatrooms.map((chat: any) => {
+            return {
+                ...chat,
+                chatType: "single"
+            }
+        })
+
+        let groupChatrooms = await GroupChatModel.aggregate([
+            { $match: { participants: new mongoose.Types.ObjectId(currentUserId), deletedBy: { $ne: new mongoose.Types.ObjectId(currentUserId) }, ...(search && groupSearchQuery) } },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "participants",
+                    foreignField: "_id",
+                    as: "participants"
+                }
+            },
+            {
+                $addFields: {
+                    chatCleared: {
+                        $first: {
+                            $filter: {
+                                input: "$messageClearStatus",
+                                as: "item",
+                                cond: { $eq: ["$$item.userId", new mongoose.Types.ObjectId(currentUserId)] }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "favouriteBy",
+                    foreignField: "_id",
+                    as: "favouriteBy"
+                }
+            },
+            { $match: { ...(favourites==='true' && { 'favouriteBy._id': new mongoose.Types.ObjectId(currentUserId) }) } },
+            {
+                $lookup: {
+                    from: "media",
+                    localField: "groupImage",
+                    foreignField: "_id",
+                    as: "groupImage"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$groupImage",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // messages
+            {
+                $lookup: {
+                    from: "messages",
+                    let: { groupChatroomId: "$_id", currentUserId: new mongoose.Types.ObjectId(currentUserId), clearAt: "$chatCleared.clearedAt" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$group", "$$groupChatroomId"] },
+                                        {
+                                            $or: [
+                                                { $eq: ['$$clearAt', null] },
+                                                { $gt: ['$createdAt', "$$clearAt"] }
+                                            ]
+                                        }
+
+                                    ]
+                                }
+                            }
+                        },
+                        { $sort: { createdAt: -1 } },
+                        { $limit: 1 },
+                        { $skip: 0 }
+                    ],
+                    as: "currentMessage"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$currentMessage",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "messages",
+                    let: { groupChatroomId: "$_id", currentUserId: currentUserId },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$group", "$$groupChatroomId"] },
+                                        { $not: [{ $in: ["$$currentUserId", "$seenBy"] }] }
+                                    ]
+                                }
+                            }
+                        },
+                    ],
+                    as: "unreadMessages"
+                }
+            },
+            {
+                $addFields: {
+                    unreadMessageCount: {
+                        $size: "$unreadMessages"
+                    }
+                }
+            },
+            {
+                $match: matchQuery
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "currentMessage.sender",
+                    foreignField: "_id",
+                    as: "currentMessage.sender"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$currentMessage.sender",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "currentMessage.receiver",
+                    foreignField: "_id",
+                    as: "currentMessage.receiver"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$currentMessage.receiver",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            { $sort: { "currentMessage.createdAt": -1 } },
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    participants: userFieldSelectionModel,
+                    active: 1,
+                    blocked: 1,
+                    chatCleared: 1,
+                    // favouriteBy:1,
+                    groupImage: fileModelFieldSelection,
+                    // friend: { ...userFieldSelectionModel, profileImage: fileModelFieldSelection },
+                    currentMessage: { ...messageFieldSelection, sender: userFieldSelectionModel, receiver: userFieldSelectionModel },
+                    unreadMessageCount: 1
+                }
+            }
+        ])
+
+        groupChatrooms = groupChatrooms.map((chat: any) => {
+            return {
+                ...chat,
+                chatType: "group"
+            }
+        })
+
+        const allChatrooms = [...chatrooms, ...groupChatrooms];
+
+        if (allChatrooms.length > 0) {
+            allChatrooms.sort((a: any, b: any) => {
+                const aTime = a.currentMessage?.createdAt ? new Date(a.currentMessage.createdAt).getTime() : 0;
+                const bTime = b.currentMessage?.createdAt ? new Date(b.currentMessage.createdAt).getTime() : 0;
+                return bTime - aTime;
+            });
+        }
+
 
         return res.status(200).json({
             success: true,
             message: "Detail fetched!",
             data: {
-                chatrooms: chatrooms
+                // chatrooms: chatrooms,
+                // groupChatrooms: groupChatrooms
+                allChatrooms: allChatrooms
                 // total: totalMessage,
                 // limit: limit,
                 // page: page,
@@ -812,7 +1010,7 @@ export const updateChatRoom = async (req: any, res: any) => {
 
             await ChatRoomModel.updateOne(
                 { _id: chatroom._id },
-                { $push: { deletedBy: currentUserId,messageClearStatus: { userId: currentUserId, clearedAt: new Date() }  } }
+                { $push: { deletedBy: currentUserId, messageClearStatus: { userId: currentUserId, clearedAt: new Date() } } }
             )
             responseMessage = 'Room deleted!'
         }

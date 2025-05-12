@@ -43,14 +43,14 @@ export const signupSchema = Joi.object({
       "string.max": "Password must be at most 30 characters",
       "any.required": "Password is required"
     }),
-    phone: Joi.string()
-    .pattern(/^[0-9]{10,15}$/)
-    .required()
-    .messages({
-      "string.pattern.base": "Phone number must be between 10 to 15 digits",
-      "string.empty": "Phone number is required",
-      "any.required": "Phone number is required"
-    }),
+    // phone: Joi.string()
+    // .pattern(/^[0-9]{10,15}$/)
+    // .required()
+    // .messages({
+    //   "string.pattern.base": "Phone number must be between 10 to 15 digits",
+    //   "string.empty": "Phone number is required",
+    //   "any.required": "Phone number is required"
+    // }),
     gender: Joi.string()
     .valid("male", "female", "other")
     .required()
@@ -64,9 +64,9 @@ export const signupSchema = Joi.object({
       "date.base": "Date of birth must be a valid date",
       "any.required": "Date of birth is required"
     }),
-    bio:Joi.string()
-    .optional()
-    .messages({
-        'string.base':'bio must be a string'
-    })
+    // bio:Joi.string()
+    // .optional()
+    // .messages({
+    //     'string.base':'bio must be a string'
+    // })
 })

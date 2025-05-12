@@ -125,6 +125,14 @@ export const login = async (req: any, res: any) => {
             });
         }
 
+        if(user.blockedByAdmin){
+            return res.status(403).json({
+                success: false,
+                message: 'You have blocked by Admin.',
+            });
+        }
+
+
         // Compare password with hashed password in database
         const isMatch = await comparePassword(password, user.password);
         if (!isMatch) {

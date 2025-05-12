@@ -22,7 +22,7 @@ export const userFieldSelection = {
             ]
         }
     },
-    // userSetting:1
+    // userContacts:1
 }
 
 export const userFieldSelectionContactModel = {
