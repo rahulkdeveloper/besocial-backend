@@ -1,5 +1,6 @@
 import MediaModel from "src/model/Media";
-
+import cloudinary from 'cloudinary';
+import fs from "fs";
 
 export const uploadSingleFile = async (req: any, res: any) => {
     try {
@@ -12,19 +13,42 @@ export const uploadSingleFile = async (req: any, res: any) => {
 
         const file = req.file;
 
-        const newMedia = await MediaModel.create({
-            user: currentUserId,
-            name: file.originalname,
-            filename: file.filename,
-            path: file.path,
-            url: file.path,
-            mimetype: file.mimetype,
-            size: file.size,
-            fileType: file.mimetype.split("/")[0],
-            folderName: file.destination,
-            alt: "",
+        const result = await cloudinary.v2.uploader.upload(req.file.path, {
+            folder: 'uploads',
+        });
 
-        })
+        let newMedia;
+        if (result.secure_url) {
+            newMedia = await MediaModel.create({
+                user: currentUserId,
+                name: file.originalname,
+                filename: file.filename,
+                path: file.path,
+                url: result.secure_url,
+                mimetype: file.mimetype,
+                size: file.size,
+                fileType: file.mimetype.split("/")[0],
+                folderName: result.asset_folder,
+                alt: "",
+
+            })
+            fs.unlinkSync(req.file.path);
+        }
+        else {
+            newMedia = await MediaModel.create({
+                user: currentUserId,
+                name: file.originalname,
+                filename: file.filename,
+                path: file.path,
+                url: file.path,
+                mimetype: file.mimetype,
+                size: file.size,
+                fileType: file.mimetype.split("/")[0],
+                folderName: file.destination,
+                alt: "",
+
+            })
+        }
 
         return res.status(200).json({
             success: true,
@@ -50,7 +74,7 @@ export const uploadMultipleeFiles = async (req: any, res: any) => {
 
         const files = req.files;
 
-       const mediaData =  await Promise.all(files.map(async (file:any) => {
+        const mediaData = await Promise.all(files.map(async (file: any) => {
             const newMedia = await MediaModel.create({
                 user: currentUserId,
                 name: file.originalname,

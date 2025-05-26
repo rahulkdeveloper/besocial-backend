@@ -198,7 +198,8 @@ export const updateContactRequest = async (req: any, res: any) => {
             success: true,
             message: "Successfully updated!",
             data: {
-                chatroom
+                chatroom,
+                contactRequestExist
             }
         });
 
@@ -238,6 +239,7 @@ export const listContactRequest = async (req: any, res: any) => {
                     email: 1,
                     username: 1,
                     fullName: 1,
+                    bio:1,
                     profileImage:1
                 },
                 populate: {

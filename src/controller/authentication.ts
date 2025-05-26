@@ -111,10 +111,13 @@ export const login = async (req: any, res: any) => {
         let user: any;
         if (emailOrPhone.includes('@')) {
             // It's an email
-            user = await UserModel.findOne({ email: emailOrPhone });
+            user = await UserModel.findOne({ email: emailOrPhone })
+            .populate("profileImage","url")
+            
         } else {
             // It's a phone number
-            user = await UserModel.findOne({ phone: emailOrPhone });
+            user = await UserModel.findOne({ phone: emailOrPhone })
+            .populate("profileImage","url")
         }
 
         // If user is not found
@@ -168,6 +171,7 @@ export const login = async (req: any, res: any) => {
                     status: "online",
                     gender: user.gender,
                     lastSeen: user.lastSeen,
+                    profilImage:user.profileImage?.url || ''
                 },
                 token,
             },

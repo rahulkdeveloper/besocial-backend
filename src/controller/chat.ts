@@ -28,8 +28,8 @@ export const sendMessage = async (req: any, res: any) => {
             });
         }
 
-        const receiverDetail: any = await fetchUser(chatroom.receiver);
         const senderDetail: any = await fetchUser(currentUserId)
+        const receiverDetail: any = await fetchUser(chatroom.receiver);
 
         if (!receiverDetail) {
             return res.status(404).json({
@@ -158,7 +158,9 @@ export const chatroomById = async (req: any, res: any) => {
         let ChatCleared;
         let chatClearedDate = null;
 
-        ChatCleared = chatroom.messageClearStatus.find((item: any) => item.userId._id.toString() === currentUserId.toString());
+        if(chatroom.messageClearStatus.length>0){
+            ChatCleared = chatroom.messageClearStatus.find((item: any) => item.userId._id.toString() === currentUserId.toString());
+        }
 
         if (ChatCleared) {
             chatClearedDate = new Date(ChatCleared.clearedAt)
@@ -182,9 +184,9 @@ export const chatroomById = async (req: any, res: any) => {
 
         // make all message seen in this chatroom;
 
-        await MessageModel.updateMany({
-            chatRoomId: chatroom._id, receiver: currentUserId, isBlocked: false
-        }, { $set: { seen: true } })
+        // await MessageModel.updateMany({
+        //     chatRoomId: chatroom._id, receiver: currentUserId, isBlocked: false
+        // }, { $set: { seen: true } })
 
         // all message of chatrooms
         const messages = await MessageModel.find(
