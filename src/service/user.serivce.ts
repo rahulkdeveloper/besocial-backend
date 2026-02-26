@@ -39,7 +39,8 @@ export const userFieldSelectionModel = {
     username: 1,
     email: 1,
     bio: 1,
-    status: 1
+    status: 1,
+    lastSeen:1
 }
 
 export const fileModelFieldSelection = {
