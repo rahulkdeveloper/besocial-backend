@@ -143,7 +143,7 @@ export const fetchUser = async (userId: Types.ObjectId | string) => {
 
 export const checkUsersBlockedEachOther = (senderDetail: any, receiverDetail: any, currentUserId: mongoose.ObjectId, chatroom: any) => {
 
-    let returnMessage = { error: false, message: '', statusCode: 200,blockedByMe:false };
+    let returnMessage = { error: false, message: '', statusCode: 200, blockedByMe: false };
 
 
     if (chatroom && chatroom.blockStatus?.length > 0) {
@@ -152,10 +152,10 @@ export const checkUsersBlockedEachOther = (senderDetail: any, receiverDetail: an
 
         if (isBlocked) {
 
-            return { error: true, message: 'You have blocked this user!', statusCode: 403,blockedByMe:true }
+            return { error: true, message: 'You have blocked this user!', statusCode: 403, blockedByMe: true }
         }
         else {
-            return { error: true, message: 'Receiver has been blocked you!', statusCode: 403,blockedByMe:false }
+            return { error: true, message: 'Receiver has been blocked you!', statusCode: 403, blockedByMe: false }
 
         }
     }
@@ -163,17 +163,37 @@ export const checkUsersBlockedEachOther = (senderDetail: any, receiverDetail: an
     if (senderDetail && senderDetail?.blockedUsers.length > 0) {
         let isBlocked = senderDetail.blockedUsers.some((user: any) => user._id.toString() === receiverDetail._id.toString());
         if (isBlocked) {
-            returnMessage = { error: true, message: 'You have blocked this user!', statusCode: 403,blockedByMe:true }
+            returnMessage = { error: true, message: 'You have blocked this user!', statusCode: 403, blockedByMe: true }
         }
     }
 
     if (receiverDetail && receiverDetail?.blockedUsers.length > 0) {
         let isBlocked = receiverDetail.blockedUsers.some((user: any) => user._id.toString() === currentUserId.toString());
         if (isBlocked) {
-            returnMessage = { error: true, message: 'Receiver has been blocked you!', statusCode: 403,blockedByMe:false }
+            returnMessage = { error: true, message: 'Receiver has been blocked you!', statusCode: 403, blockedByMe: false }
 
         }
     }
 
     return returnMessage
+}
+
+export const validateUser = async (token: string) => {
+    try {
+
+        if(!token){
+            return null
+        }
+        let decode: any = await verifyJwtToken(token);
+        if (!decode) return null;
+        const user: any = await UserModel.findOne({ _id: decode._id }).lean();
+
+        if (!user) {
+            return false
+        }
+        return { _id: user._id, email: user.email }
+
+    } catch (error) {
+        return null
+    }
 }

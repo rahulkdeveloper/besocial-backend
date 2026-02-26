@@ -10,4 +10,6 @@ const auth_1 = require("../middleware/auth");
 router.get("/list", auth_1.isLoggedIn, user_1.userList);
 router.get("/view-profile/:id", auth_1.isLoggedIn, user_1.viewUserProfile);
 router.get("/profile/", auth_1.isLoggedIn, user_1.userProfile);
+router.put("/profile/update", auth_1.isLoggedIn, user_1.updateProfile);
+router.put("/profile/settings", auth_1.isLoggedIn, user_1.updateProfileSetting);
 exports.default = router;

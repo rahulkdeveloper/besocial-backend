@@ -69,12 +69,12 @@ const UserSchema = new mongoose_1.Schema({
         required: false,
     },
     profileImage: {
-        type: String,
-        required: false,
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: 'Media'
     },
     phone: {
         type: String,
-        required: true
+        // required: true
     },
     gender: {
         type: String,
@@ -83,7 +83,6 @@ const UserSchema = new mongoose_1.Schema({
     },
     bio: {
         type: String,
-        required: true
     },
     lastSeen: {
         type: Date
@@ -92,9 +91,6 @@ const UserSchema = new mongoose_1.Schema({
         type: String,
         enum: ["offline", "online"],
         default: "offline"
-    },
-    resetPasswotdToken: {
-        type: String
     },
     blockedUsers: [
         {
@@ -118,12 +114,23 @@ const UserSchema = new mongoose_1.Schema({
     isAccountActive: {
         type: Boolean,
         default: true
+    },
+    blockedByAdmin: {
+        type: Boolean,
+        default: false
+    },
+    isOnBoardCompleted: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
 });
-UserSchema.index({ email: 1 }); // Ascending index on email
-UserSchema.index({ phone: 1 }); // Ascending index on phone
+UserSchema.index({ email: 1 });
+UserSchema.index({ phone: 1 });
+UserSchema.index({ username: 1 });
+UserSchema.index({ fullName: 1 });
+UserSchema.index({ gender: 1 });
 // Create the User model
 const User = mongoose_1.default.model('User', UserSchema);
 exports.default = User;

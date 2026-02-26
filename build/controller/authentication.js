@@ -18,6 +18,7 @@ const utils_1 = require("../helper/utils");
 const moment_1 = __importDefault(require("moment"));
 const email_1 = require("../helper/email");
 const constant_1 = require("../config/constant");
+const user_serivce_1 = require("../service/user.serivce");
 const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let { email, username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
@@ -68,6 +69,8 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 data: null
             });
         }
+        // create user settings
+        const userSettings = yield (0, user_serivce_1.createUserSetting)(newUser._id, {});
         // generate accessToken;
         const token = yield (0, utils_1.generateAccessToken)({ _id: newUser._id, email: newUser.email });
         return res.status(200).json({
@@ -75,6 +78,7 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             message: "Signup successfully!",
             data: {
                 user: newUser,
+                userSettings: userSettings,
                 token
             }
         });
@@ -89,6 +93,7 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.signUp = signUp;
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { emailOrPhone, password } = req.body;
     if (!emailOrPhone || !password) {
         return res.status(400).json({
@@ -101,17 +106,25 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         let user;
         if (emailOrPhone.includes('@')) {
             // It's an email
-            user = yield user_1.default.findOne({ email: emailOrPhone });
+            user = yield user_1.default.findOne({ email: emailOrPhone })
+                .populate("profileImage", "url");
         }
         else {
             // It's a phone number
-            user = yield user_1.default.findOne({ phone: emailOrPhone });
+            user = yield user_1.default.findOne({ phone: emailOrPhone })
+                .populate("profileImage", "url");
         }
         // If user is not found
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: 'User not found.',
+            });
+        }
+        if (user.blockedByAdmin) {
+            return res.status(403).json({
+                success: false,
+                message: 'You have blocked by Admin.',
             });
         }
         // Compare password with hashed password in database
@@ -145,6 +158,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     status: "online",
                     gender: user.gender,
                     lastSeen: user.lastSeen,
+                    profilImage: ((_a = user.profileImage) === null || _a === void 0 ? void 0 : _a.url) || ''
                 },
                 token,
             },

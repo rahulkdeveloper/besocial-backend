@@ -54,15 +54,45 @@ const GroupChatSchema = new mongoose_1.Schema({
             ref: 'User', // Reference to the 'User' model
             required: true,
         }],
-    profileImage: {
+    groupImage: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: 'Media', // Reference to the 'User' model
     },
+    favouriteBy: [{
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+        }],
+    messageClearStatus: [{
+            userId: {
+                type: mongoose_1.default.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            clearedAt: {
+                type: Date,
+            }
+        }],
+    deletedBy: [{
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+        }],
     active: {
         type: Boolean,
         default: true
     },
-    isAdminCanSendMessage: {
+    isParticipantsCanSendMessage: {
+        type: Boolean,
+        default: true
+    },
+    isParticipantsCanAddMembers: {
+        type: Boolean,
+        default: true
+    },
+    isParticipantsCanModifyGroupImage: {
+        type: Boolean,
+        default: true
+    },
+    isDeleted: {
         type: Boolean,
         default: false
     }

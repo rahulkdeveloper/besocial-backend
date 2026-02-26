@@ -57,6 +57,10 @@ const UserSettingSchema = new mongoose_1.Schema({
         type: Boolean,
         default: true
     },
+    isAccountPrivate: {
+        type: Boolean,
+        default: false
+    },
     theme: {
         type: String,
         enum: ["light", "dark"],
