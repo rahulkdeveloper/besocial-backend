@@ -39,7 +39,8 @@ export const userFieldSelectionModel = {
     username: 1,
     email: 1,
     bio: 1,
-    status: 1
+    status: 1,
+    lastSeen:1
 }
 
 export const fileModelFieldSelection = {
@@ -62,7 +63,7 @@ export const modifiyUserDataBasedOnSettings = (userData: any, userProfileSetting
     return userData
 }
 
-export const updateSocketId = async (token: string, socketId = '') => {
+export const updateSocketId = async (token: string, socketId = '',status:string,lastSeen:any) => {
     try {
 
         let decode: any = await verifyJwtToken(token);
@@ -79,7 +80,19 @@ export const updateSocketId = async (token: string, socketId = '') => {
             return false
         }
 
-        await UserModel.findOneAndUpdate({ _id: user._id }, { socketId });
+        let updateData:any = {
+            socketId
+        }
+
+        if(status){
+            updateData.status = status
+        }
+
+        if(lastSeen){
+            updateData.lastSeen = lastSeen;
+        }
+
+        await UserModel.findOneAndUpdate({ _id: user._id }, updateData);
         return true
     } catch (error) {
         console.log("error in update user serivce fn::", error);
