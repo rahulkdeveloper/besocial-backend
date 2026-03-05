@@ -44,12 +44,12 @@ const ContactSchema = new mongoose_1.Schema({
     },
     sender: {
         type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'User', // Reference to the 'User' model
+        ref: 'User',
         required: true,
     },
     receiver: {
         type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: 'User', // Reference to the 'User' model
+        ref: 'User',
         required: true,
     },
 }, {

@@ -1,20 +1,25 @@
-export const validate = (schema:any,source:'body'|'query'|'params'="body")=>{
-    console.log("validation func");
-    
-    return (req:any,res:any,next:any)=>{
-        const {error} = schema.validate(req[source],{ abortEarly: false });
+import { NextFunction } from "express";
+import { Request, Response } from 'express'
+import { ObjectSchema, ValidationErrorItem } from "joi";
 
-        if(error){
-            const formattedErrors = error.details.map((err:any)=>{
+type Source = 'body' | 'query' | 'params'
+export const validate = (schema: ObjectSchema, source: Source = "body") => {
+    console.log("validation func");
+
+    return (req: Request, res: Response, next: NextFunction) => {
+        const { error } = schema.validate(req[source], { abortEarly: false });
+
+        if (error) {
+            const formattedErrors = error.details.map((err: ValidationErrorItem) => {
                 return {
-                    field:err.path[0],
-                    message:err.message
+                    field: err.path[0],
+                    message: err.message
                 }
             })
             return res.status(400).json({
-                success:false,
-                message:"Validation failed",
-                errors:formattedErrors[0]
+                success: false,
+                message: "Validation failed",
+                errors: formattedErrors[0]
             })
         }
         next()

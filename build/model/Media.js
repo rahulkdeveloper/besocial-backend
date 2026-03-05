@@ -50,6 +50,9 @@ const MediaSchema = new mongoose_1.Schema({
         type: String,
         required: true
     },
+    path: {
+        type: String,
+    },
     size: {
         type: String,
         required: true
@@ -66,6 +69,9 @@ const MediaSchema = new mongoose_1.Schema({
         type: String
     },
     mimeType: {
+        type: String
+    },
+    filename: {
         type: String
     }
 }, {

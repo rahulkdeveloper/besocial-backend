@@ -443,8 +443,8 @@ export const myFriends = async (req: any, res: any) => {
         const list = await ContactModel.aggregate(pipeline);
         const result = await ContactModel.aggregate(countPipeline);
 
-        console.log("result::", result);
-        console.log("list::", list)
+        // console.log("result::", result);
+        // console.log("list::", list)
 
         const total: any = result[0]?.total || 0;
         const totalPages = Math.ceil(total / limit)

@@ -44,11 +44,9 @@ const MessageSchema = new mongoose_1.Schema({
     receiver: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: 'User', // Reference to the 'User' model
-        required: true,
     },
     content: {
         type: String,
-        required: true
     },
     chatRoomId: {
         type: mongoose_1.default.Schema.Types.ObjectId,
@@ -57,11 +55,10 @@ const MessageSchema = new mongoose_1.Schema({
     group: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: 'GroupChat',
-        required: true,
     },
     type: {
         type: String,
-        enum: ["text", "audio", "video", "image", "video", "file"],
+        enum: ["text", "audio", "video", "image", "file"],
         default: "text"
     },
     seenBy: [{
@@ -72,6 +69,9 @@ const MessageSchema = new mongoose_1.Schema({
     file: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         ref: 'Media',
+    },
+    fileText: {
+        type: String
     },
     seen: {
         type: Boolean,
@@ -84,7 +84,11 @@ const MessageSchema = new mongoose_1.Schema({
     isDeleted: {
         type: Boolean,
         default: false
-    }
+    },
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
 });

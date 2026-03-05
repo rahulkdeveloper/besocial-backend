@@ -41,6 +41,36 @@ const ChatRoomSchema = new mongoose_1.Schema({
             ref: 'User', // Reference to the 'User' model
             required: true,
         }],
+    favouriteBy: [{
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+        }],
+    blockStatus: [{
+            userId: {
+                type: mongoose_1.default.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            blockedUserId: {
+                type: mongoose_1.default.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true,
+            }
+        }],
+    messageClearStatus: [{
+            userId: {
+                type: mongoose_1.default.Schema.Types.ObjectId,
+                ref: 'User',
+                required: true
+            },
+            clearedAt: {
+                type: Date,
+            }
+        }],
+    deletedBy: [{
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+        }],
     active: {
         type: Boolean,
         default: true

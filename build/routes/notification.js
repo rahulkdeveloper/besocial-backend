@@ -5,10 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const router = express_1.default.Router();
-const contact_1 = require("../controller/contact");
+const notification_1 = require("../controller/notification");
 const auth_1 = require("../middleware/auth");
-router.post("/send-request", auth_1.isLoggedIn, contact_1.addInContact);
-router.put("/update/request", auth_1.isLoggedIn, contact_1.updateContactRequest);
-router.get("/list", auth_1.isLoggedIn, contact_1.listContactRequest);
-router.get("/freinds", auth_1.isLoggedIn, contact_1.myFriends);
+router.get("/list", auth_1.isLoggedIn, notification_1.list);
 exports.default = router;

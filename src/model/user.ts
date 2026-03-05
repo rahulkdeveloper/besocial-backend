@@ -1,5 +1,5 @@
 import { required } from 'joi';
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document,Types } from 'mongoose';
 
 enum Gender {
   male = "male",
@@ -9,6 +9,7 @@ enum Gender {
 
 // Interface for User Document
 export interface IUser extends Document {
+  _id:Types.ObjectId;
   fullName: string;
   email: string;
   password: string;
@@ -24,7 +25,7 @@ export interface IUser extends Document {
   lastSeen: Date;
   lastLoginAt: Date;
   status: "online" | "offline";
-  blockedUsers: [mongoose.Types.ObjectId];
+  blockedUsers: mongoose.Types.ObjectId[];
   resetPasswordToken: string;
   socketId: string;
   isDeleted: boolean;

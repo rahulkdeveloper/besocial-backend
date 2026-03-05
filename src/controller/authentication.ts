@@ -8,6 +8,8 @@ import {createUserSetting} from "../service/user.serivce"
 
 
 export const signUp = async (req: any, res: any) => {
+    console.log("signup payload",req.body);
+    
  
     let { email,username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
@@ -25,15 +27,6 @@ export const signUp = async (req: any, res: any) => {
             dateOfBirth = moment(dateOfBirth, 'DD-MM-YYYY').toDate();
         }
 
-        const checkUserWithPhone = await UserModel.findOne({ phone }).lean();
-
-        if (checkUserWithPhone) {
-            return res.status(403).json({
-                success: true,
-                message: "Phone already exist!",
-                data: null
-            });
-        }
 
         const checkUserWithUsername = await UserModel.findOne({ username }).lean();
 
@@ -164,7 +157,7 @@ export const login = async (req: any, res: any) => {
             message: 'Login successful.',
             data: {
                 user: {
-                    id: user._id,
+                    _id: user._id,
                     fullName: user.fullName,
                     email: user.email,
                     phone: user.phone,

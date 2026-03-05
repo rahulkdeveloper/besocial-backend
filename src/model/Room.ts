@@ -1,7 +1,8 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // Interface for User Document
 export interface IRoom extends Document {
+    _id:Types.ObjectId;
     participants: mongoose.Types.ObjectId[];
     favouriteBy: mongoose.Types.ObjectId[];
     blockStatus: {

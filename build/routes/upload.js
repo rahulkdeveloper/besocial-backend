@@ -5,10 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const router = express_1.default.Router();
-const contact_1 = require("../controller/contact");
+const upload_1 = require("../controller/upload");
 const auth_1 = require("../middleware/auth");
-router.post("/send-request", auth_1.isLoggedIn, contact_1.addInContact);
-router.put("/update/request", auth_1.isLoggedIn, contact_1.updateContactRequest);
-router.get("/list", auth_1.isLoggedIn, contact_1.listContactRequest);
-router.get("/freinds", auth_1.isLoggedIn, contact_1.myFriends);
+const fileUpload_1 = __importDefault(require("../middleware/fileUpload"));
+router.post("/single", auth_1.isLoggedIn, fileUpload_1.default.single("file"), upload_1.uploadSingleFile);
+router.post("/multiple", auth_1.isLoggedIn, fileUpload_1.default.array('files', 10), upload_1.uploadMultipleeFiles);
 exports.default = router;
