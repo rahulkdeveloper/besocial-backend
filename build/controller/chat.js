@@ -24,8 +24,11 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const constant_1 = require("../config/constant");
 const user_1 = __importDefault(require("src/model/user"));
 const GroupChat_1 = __importDefault(require("src/model/GroupChat"));
+const redis_1 = require("../config/redis");
+const appError_1 = require("../errors/appError");
 const IsProduction = process.env.NODE_ENV === 'production';
 const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { id } = req.params;
     const currentUserId = req.user._id;
     const { message = '', type = 'text', file, fileText = '' } = req.body;
@@ -39,7 +42,7 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         const senderDetail = yield (0, user_serivce_1.fetchUser)(currentUserId);
-        const receiverDetail = yield (0, user_serivce_1.fetchUser)(chatroom.receiver);
+        const receiverDetail = yield (0, user_serivce_1.fetchUser)((_a = chatroom === null || chatroom === void 0 ? void 0 : chatroom.receiver) === null || _a === void 0 ? void 0 : _a._id);
         if (!receiverDetail) {
             return res.status(404).json({
                 success: false,
@@ -91,11 +94,27 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         // send socket notification to receiver
-        if (!isBlocked && (0, socket_1.checkUserSocketConnected)(receiverDetail.socketId)) {
-            app_1.io.to(receiverDetail.socketId).emit('message_received', {
+        // if (!isBlocked && checkUserSocketConnected(receiverDetail.socketId)) {
+        //     io.to(receiverDetail.socketId).emit('message_received', {
+        //         type: 'chat',
+        //         room: chatroom._id,
+        //         data: newMessage
+        //     })
+        // }
+        if (!isBlocked) {
+            // console.log("sending message socket=====", chatroom._id)
+            app_1.io.to(chatroom._id.toString()).emit('message_received', {
                 type: 'chat',
                 room: chatroom._id,
+                receiverId: receiverDetail._id,
                 data: newMessage
+            });
+            // console.log("sending unread_messages===========>",receiverDetail._id.toString())
+            app_1.io.to(receiverDetail._id.toString()).emit('unread_messages', {
+                type: 'chat',
+                room: chatroom._id,
+                receiverId: receiverDetail._id,
+                data: newMessage,
             });
         }
         return res.status(201).json({
@@ -114,7 +133,9 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.sendMessage = sendMessage;
 const chatroomById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const { id } = req.params;
+    const redis = (0, redis_1.getRedisClient)();
     try {
         const currentUserId = req.user._id;
         let { limit = 10, page = 1 } = req.query;
@@ -131,8 +152,11 @@ const chatroomById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         if (chatroom.receiver) {
             chatroom.friend = chatroom.receiver;
+            const isOnline = yield redis.exists(`sockets:${(_a = chatroom.receiver) === null || _a === void 0 ? void 0 : _a._id.toString()}`);
+            console.log("isOnline====>", isOnline);
+            chatroom.friend.status = isOnline ? "online" : "offline";
         }
-        const receiverDetail = yield (0, user_serivce_1.fetchUser)(chatroom.receiver);
+        const receiverDetail = yield (0, user_serivce_1.fetchUser)((_b = chatroom === null || chatroom === void 0 ? void 0 : chatroom.receiver) === null || _b === void 0 ? void 0 : _b._id);
         const senderDetail = yield (0, user_serivce_1.fetchUser)(currentUserId);
         let isBlocked = false;
         let ChatCleared;
@@ -648,18 +672,15 @@ const allChatrooms = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.allChatrooms = allChatrooms;
-const deleteMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+const deleteMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
     const { id, messageId } = req.params;
     try {
-        const currentUserId = req.user._id;
+        const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
         // find room details
         let chatroom = yield (0, chatroom_service_1.fetchChatRoom)(id, currentUserId);
         if (!chatroom) {
-            return res.status(404).json({
-                success: false,
-                message: IsProduction ? 'The requested content could not be found.' : "Room not found!"
-            });
+            throw new appError_1.ApiError(404, "Room not found");
         }
         const messagePopulate = [
             {
@@ -700,7 +721,7 @@ const deleteMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: IsProduction ? 'The requested content could not be found.' : "Message not found!"
             });
         }
-        if (((_a = messageExist.sender) === null || _a === void 0 ? void 0 : _a._id.toString()) !== currentUserId.toString()) {
+        if (((_b = messageExist.sender) === null || _b === void 0 ? void 0 : _b._id.toString()) !== (currentUserId === null || currentUserId === void 0 ? void 0 : currentUserId.toString())) {
             return res.status(403).json({
                 success: false,
                 message: IsProduction ? 'Invalid request.' : "Only sender can delete message!"
@@ -712,27 +733,35 @@ const deleteMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         const receiverDetail = yield (0, user_serivce_1.fetchUser)(new mongoose_1.default.Types.ObjectId(messageExist.receiver._id));
         // send socket notification to receiver
-        if ((0, socket_1.checkUserSocketConnected)(receiverDetail.socketId)) {
-            app_1.io.to(receiverDetail.socketId).emit('message_deleted', {
-                type: 'chat',
-                room: chatroom._id,
-                data: deletedMessage
-            });
-        }
+        // if (checkUserSocketConnected(receiverDetail?.socketId)) {
+        //     io.to(receiverDetail?.socketId).emit('message_deleted', {
+        //         type: 'chat',
+        //         room: chatroom._id,
+        //         data: deletedMessage
+        //     })
+        // }
+        // send socket in roomId...
+        app_1.io.to((_c = chatroom === null || chatroom === void 0 ? void 0 : chatroom._id) === null || _c === void 0 ? void 0 : _c.toString()).emit("delete_message", {
+            type: "chat",
+            roomd: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id,
+            receiverId: receiverDetail === null || receiverDetail === void 0 ? void 0 : receiverDetail._id,
+            messageId: messageId
+        });
         return res.status(200).json({
             success: true,
             message: "Message Deleted!",
-            data: deletedMessage
+            data: Object.assign(Object.assign({}, deletedMessage), { roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id })
         });
     }
     catch (error) {
         console.error("Delete Message Error:", error);
-        return res.status(500).json({
-            success: false,
-            message: IsProduction
-                ? "Something went wrong. Please try again later."
-                : `Server Error: ${error.message}`
-        });
+        next(error);
+        // return res.status(500).json({
+        //     success: false,
+        //     message: IsProduction
+        //         ? "Something went wrong. Please try again later."
+        //         : `Server Error: ${error.message}`
+        // });
     }
 });
 exports.deleteMessage = deleteMessage;
@@ -832,13 +861,14 @@ const editMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.editMessage = editMessage;
 const updateChatRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { id } = req.params;
     try {
         const currentUserId = req.user._id;
         const { addToFavourites, removeFromFavourites, block, unblock, clearMessage = false, roomDelete = false } = req.body;
         // find room details
         let chatroom = yield (0, chatroom_service_1.fetchChatRoom)(id, currentUserId);
-        const friend = yield (0, user_serivce_1.fetchUser)(new mongoose_1.default.Types.ObjectId(chatroom.receiver._id));
+        const friend = yield (0, user_serivce_1.fetchUser)(new mongoose_1.default.Types.ObjectId((_a = chatroom === null || chatroom === void 0 ? void 0 : chatroom.receiver) === null || _a === void 0 ? void 0 : _a._id));
         if (!chatroom) {
             return res.status(404).json({
                 success: false,

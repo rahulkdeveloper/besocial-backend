@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkUsersBlockedEachOther = exports.fetchUser = exports.createUserSetting = exports.updateSocketId = exports.modifiyUserDataBasedOnSettings = exports.fileModelFieldSelection = exports.userFieldSelectionModel = exports.userFieldSelectionContactModel = exports.userFieldSelection = void 0;
+exports.validateUser = exports.checkUsersBlockedEachOther = exports.fetchUser = exports.createUserSetting = exports.updateSocketId = exports.modifiyUserDataBasedOnSettings = exports.fileModelFieldSelection = exports.userFieldSelectionModel = exports.userFieldSelectionContactModel = exports.userFieldSelection = void 0;
 const user_1 = __importDefault(require("../model/user"));
 const utils_1 = require("../helper/utils");
 const UserSettings_1 = __importDefault(require("src/model/UserSettings"));
@@ -50,7 +50,8 @@ exports.userFieldSelectionModel = {
     username: 1,
     email: 1,
     bio: 1,
-    status: 1
+    status: 1,
+    lastSeen: 1
 };
 exports.fileModelFieldSelection = {
     _id: 1,
@@ -68,7 +69,7 @@ const modifiyUserDataBasedOnSettings = (userData, userProfileSettings) => {
     return userData;
 };
 exports.modifiyUserDataBasedOnSettings = modifiyUserDataBasedOnSettings;
-const updateSocketId = (token_1, ...args_1) => __awaiter(void 0, [token_1, ...args_1], void 0, function* (token, socketId = '') {
+const updateSocketId = (token_1, ...args_1) => __awaiter(void 0, [token_1, ...args_1], void 0, function* (token, socketId = '', status, lastSeen) {
     try {
         let decode = yield (0, utils_1.verifyJwtToken)(token);
         console.log("decode::", decode);
@@ -79,7 +80,16 @@ const updateSocketId = (token_1, ...args_1) => __awaiter(void 0, [token_1, ...ar
         if (!user) {
             return false;
         }
-        yield user_1.default.findOneAndUpdate({ _id: user._id }, { socketId });
+        let updateData = {
+            socketId
+        };
+        if (status) {
+            updateData.status = status;
+        }
+        if (lastSeen) {
+            updateData.lastSeen = lastSeen;
+        }
+        yield user_1.default.findOneAndUpdate({ _id: user._id }, updateData);
         return true;
     }
     catch (error) {
@@ -157,3 +167,22 @@ const checkUsersBlockedEachOther = (senderDetail, receiverDetail, currentUserId,
     return returnMessage;
 };
 exports.checkUsersBlockedEachOther = checkUsersBlockedEachOther;
+const validateUser = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!token) {
+            return null;
+        }
+        let decode = yield (0, utils_1.verifyJwtToken)(token);
+        if (!decode)
+            return null;
+        const user = yield user_1.default.findOne({ _id: decode._id }).lean();
+        return user;
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            throw new Error(error.message);
+        }
+        throw new Error("Unkown error occured");
+    }
+});
+exports.validateUser = validateUser;

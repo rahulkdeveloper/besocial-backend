@@ -26,8 +26,9 @@ const http_1 = __importDefault(require("http"));
 const path_1 = __importDefault(require("path"));
 const user_serivce_1 = require("./service/user.serivce");
 const Message_1 = __importDefault(require("./model/Message"));
-const socket_1 = require("./service/socket");
+const user_1 = __importDefault(require("./model/user"));
 const Room_1 = __importDefault(require("./model/Room"));
+const redis_1 = require("./config/redis");
 (0, connection_1.default)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.default.Server(server, {
@@ -37,44 +38,116 @@ const io = new socket_io_1.default.Server(server, {
     }
 });
 exports.io = io;
+(0, redis_1.connectRedis)();
+// io.on('connection', async (socket: any) => {
+//     const token = socket.handshake.auth.token;
+//     const socketId = socket.id;
+//     console.log("socketId", socketId);
+//     if (socketId && token) {
+//         // save to user document
+//         await updateSocketId(token, socketId)
+//     }
+//     socket.join(socketId)
+//     socket.on('chat message', (msg: string) => {
+//         io.emit('chat message', msg);
+//     });
+//     // socket.on("chatroom_join", async (data: { userId: string, chatroomdId: string }) => {
+//     //     if (data.userId && data.chatroomdId) {
+//     //         if (!activeChatrooms.has(data.userId)) {
+//     //             activeChatrooms.set(data.userId, [data.chatroomdId])
+//     //         }
+//     //         else {
+//     //             let rooms = activeChatrooms.get(data.userId);
+//     //             rooms.push(data.chatroomdId);
+//     //             rooms = [...new Set(rooms)]
+//     //             activeChatrooms.set(data.userId, rooms)
+//     //         }
+//     //     }
+//     // })
+//     // socket.on("chatroom_left", async (data: { userId: string, chatroomdId: string }) => {
+//     //     if (data.userId && data.chatroomdId) {
+//     //         if (activeChatrooms.has(data.userId)) {
+//     //             let rooms = activeChatrooms.get(data.userId);
+//     //             rooms = rooms.filter((i: any) => i.toString() !== data.chatroomdId.toString());
+//     //             activeChatrooms.set(data.userId, rooms)
+//     //         }
+//     //     }
+//     // })
+//     socket.on('message_seen', async (data: any) => {
+//         const { roomId, seenBy, unreadMessageIds } = data;
+//         if (!Array.isArray(unreadMessageIds) || unreadMessageIds.length < 1) return;
+//         const roomDetail = await ChatRoomModel.findOne({ _id: roomId }).populate('participants', '_id socketId').lean();
+//         let receiverDetail: any = roomDetail?.participants.find((participant: any) => {
+//             if (participant._id.toString() !== seenBy?.toString()) {
+//                 return participant
+//             }
+//         });
+//         // update message db to mark seen
+//         await MessageModel.updateMany(
+//             {
+//                 _id: { $in: unreadMessageIds },
+//                 sender: { $ne: seenBy },
+//                 seen: false
+//             },
+//             {
+//                 $set: { seen: true }
+//             }
+//         )
+//         // send socket notification to receiver
+//         if (receiverDetail && receiverDetail.socketId && checkUserSocketConnected(receiverDetail.socketId)) {
+//             socket.to(receiverDetail.socketId).emit('message_seen_notify', {
+//                 roomId,
+//                 seenBy,
+//                 messageIds: unreadMessageIds
+//             })
+//         }
+//     })
+//     socket.on('disconnect', async () => {
+//         console.log('User disconnected');
+//         if (token) {
+//             await updateSocketId(token, '')
+//         }
+//     });
+// });
 io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const token = socket.handshake.auth.token;
-    const socketId = socket.id;
-    console.log("socketId", socketId);
-    if (socketId && token) {
-        // save to user document
-        yield (0, user_serivce_1.updateSocketId)(token, socketId);
+    console.log("Connected:", socket.id);
+    const user = yield (0, user_serivce_1.validateUser)(token);
+    if (!user)
+        return;
+    const userId = user._id.toString();
+    const client = (0, redis_1.getRedisClient)();
+    // const decodedToken = await jwt.verify(token, process.env.JWT_SECRET_CODE as string);
+    // const { _id: userId }: any = decodedToken;
+    socket.join(userId);
+    const chatrooms = yield Room_1.default.find({ participants: userId });
+    if (chatrooms.length > 0) {
+        for (const room of chatrooms) {
+            socket.to(room._id.toString()).emit("user_online", {
+                userId,
+                roomId: room._id.toString()
+            });
+        }
     }
-    socket.join(socketId);
+    console.log("User joined socket:", userId);
+    yield client.sAdd(`sockets:${userId}`, socket.id);
+    // emit user_online in concern room
+    socket.on("chatroom_join", (data) => {
+        socket.join(data.roomId);
+    });
     socket.on('chat message', (msg) => {
         io.emit('chat message', msg);
     });
-    // socket.on('message_seen', async (data: any) => {
-    //     const { roomId, seenBy, lastSeenMessageId } = data;
-    //     // update message db to mark seen
-    //     const updateMessage:any = await MessageModel.findOneAndUpdate({ _id: lastSeenMessageId, chatRoomId: roomId }, { seen: true }, { new: true }).populate('sender', '_id socketId');
-    //     console.log("updateMessage::",updateMessage)
-    //     // send socket notification to receiver
-    //     if (updateMessage && updateMessage.sender?.socketId && checkUserSocketConnected(updateMessage.sender?.socketId)) {
-    //         socket.to(updateMessage.sender?.socketId).emit('message_seen_notify', {
-    //             roomId,
-    //             seenBy,
-    //             messageId: lastSeenMessageId
-    //         })
-    //     }
-    // })
     socket.on('message_seen', (data) => __awaiter(void 0, void 0, void 0, function* () {
         const { roomId, seenBy, unreadMessageIds } = data;
-        console.log("unreadMessageIds::", unreadMessageIds);
         if (!Array.isArray(unreadMessageIds) || unreadMessageIds.length < 1)
             return;
-        const roomDetail = yield Room_1.default.findOne({ _id: roomId }).populate('participants', '_id socketId').lean();
+        const roomDetail = yield Room_1.default.findOne({ _id: roomId }).populate('participants', '_id').lean();
         let receiverDetail = roomDetail === null || roomDetail === void 0 ? void 0 : roomDetail.participants.find((participant) => {
-            if (participant._id.toString() !== seenBy.toString()) {
+            if (participant._id.toString() !== (seenBy === null || seenBy === void 0 ? void 0 : seenBy.toString())) {
                 return participant;
             }
         });
-        console.log("receiverDetail::", receiverDetail);
         // update message db to mark seen
         yield Message_1.default.updateMany({
             _id: { $in: unreadMessageIds },
@@ -84,8 +157,8 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
             $set: { seen: true }
         });
         // send socket notification to receiver
-        if (receiverDetail && receiverDetail.socketId && (0, socket_1.checkUserSocketConnected)(receiverDetail.socketId)) {
-            socket.to(receiverDetail.socketId).emit('message_seen_notify', {
+        if (receiverDetail) {
+            socket.to(roomId.toString()).emit('message_seen_notify', {
                 roomId,
                 seenBy,
                 messageIds: unreadMessageIds
@@ -93,9 +166,24 @@ io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
         }
     }));
     socket.on('disconnect', () => __awaiter(void 0, void 0, void 0, function* () {
-        console.log('User disconnected');
-        if (token) {
-            yield (0, user_serivce_1.updateSocketId)(token, '');
+        console.log('User disconnected', socket.id);
+        yield client.sRem(`sockets:${userId}`, socket.id);
+        const count = yield client.sCard(`sockets:${userId}`);
+        console.log("count===", count);
+        if (count === 0) {
+            // emit user is offline to concern rooms
+            const chatrooms = yield Room_1.default.find({ participants: userId });
+            if (chatrooms.length > 0) {
+                for (const room of chatrooms) {
+                    socket.to(room._id.toString()).emit("user_offline", {
+                        userId,
+                        roomId: room._id.toString(),
+                        lastSeen: new Date()
+                    });
+                }
+            }
+            // update db lastseen..
+            yield user_1.default.findOneAndUpdate({ _id: userId }, { lastSeen: new Date() });
         }
     }));
 }));
@@ -105,12 +193,12 @@ app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '..', 'uploads')));
 app.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    return res.send("server is running");
+    res.send("server is running...");
 }));
 index_1.default.map(route => {
     app.use(route.path, route.handler);
 });
-const port = process.env.PORT || 8001;
+const port = Number(process.env.PORT) || 8001;
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

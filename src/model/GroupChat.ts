@@ -16,8 +16,8 @@ export interface IGroupChat extends Document {
     isParticipantsCanSendMessage: boolean;
     isParticipantsCanAddMembers: boolean
     isParticipantsCanModifyGroupImage: boolean;
-    isDeleted:boolean;
-    deletedBy:mongoose.Types.ObjectId[];
+    isDeletedForEveryone:boolean;
+    deletedFor:mongoose.Types.ObjectId[];
 }
 
 // Define the User Schema
@@ -60,7 +60,7 @@ const GroupChatSchema: Schema<IGroupChat> = new Schema(
                 type: Date,
             }
         }],
-        deletedBy: [{
+        deletedFor: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
         }],
@@ -81,7 +81,7 @@ const GroupChatSchema: Schema<IGroupChat> = new Schema(
             type: Boolean,
             default: true
         },
-        isDeleted:{
+        isDeletedForEveryone:{
             type:Boolean,
             default:false
         }

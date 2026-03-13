@@ -6,7 +6,7 @@ type Source = 'body' | 'query' | 'params'
 export const validate = (schema: ObjectSchema, source: Source = "body") => {
     console.log("validation func");
 
-    return (req: Request, res: Response, next: NextFunction) => {
+    return (req: Request, res: Response, next: NextFunction):void => {
         const { error } = schema.validate(req[source], { abortEarly: false });
 
         if (error) {
@@ -16,11 +16,12 @@ export const validate = (schema: ObjectSchema, source: Source = "body") => {
                     message: err.message
                 }
             })
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: "Validation failed",
                 errors: formattedErrors[0]
             })
+            return 
         }
         next()
     }

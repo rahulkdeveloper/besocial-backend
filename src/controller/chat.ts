@@ -5,11 +5,13 @@ import { fetchChatRoom } from '../service/chatroom.service';
 import { io } from "../app";
 import { checkUserSocketConnected } from '../service/socket'
 import { messageDetail, messageFieldSelection } from '../service/chatMessage.service';
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { mediaTypes } from '../config/constant'
-import UserModel from "src/model/user";
+import UserModel, { IUser } from "src/model/user";
 import GroupChatModel from "src/model/GroupChat";
 import { getRedisClient } from '../config/redis'
+import { ApiError } from "../errors/appError";
+import { Request, Response, NextFunction } from "express";
 
 const IsProduction = process.env.NODE_ENV as string === 'production';
 
@@ -29,8 +31,8 @@ export const sendMessage = async (req: any, res: any) => {
             });
         }
 
-        const senderDetail: any = await fetchUser(currentUserId)
-        const receiverDetail: any = await fetchUser(chatroom.receiver);
+        const senderDetail = await fetchUser(currentUserId)
+        const receiverDetail: any = await fetchUser(chatroom?.receiver?._id);
 
         if (!receiverDetail) {
             return res.status(404).json({
@@ -174,11 +176,11 @@ export const chatroomById = async (req: any, res: any) => {
         if (chatroom.receiver) {
             chatroom.friend = chatroom.receiver
             const isOnline = await redis.exists(`sockets:${chatroom.receiver?._id.toString()}`);
-            console.log("isOnline====>",isOnline)
-            chatroom.friend.status = isOnline?"online":"offline"
+            console.log("isOnline====>", isOnline)
+            chatroom.friend.status = isOnline ? "online" : "offline"
         }
 
-        const receiverDetail: any = await fetchUser(chatroom.receiver);
+        const receiverDetail: any = await fetchUser(chatroom?.receiver?._id);
         const senderDetail: any = await fetchUser(currentUserId);
 
         let isBlocked = false;
@@ -219,6 +221,8 @@ export const chatroomById = async (req: any, res: any) => {
         const messages = await MessageModel.find(
             {
                 chatRoomId: chatroom._id,
+                isDeleted: false,
+                deletedFor: { $nin: [currentUserId] },
                 $or: [
                     { isBlocked: false },
                     { isBlocked: true, sender: currentUserId },
@@ -432,6 +436,9 @@ export const allChatrooms = async (req: any, res: any) => {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$chatRoomId", "$$chatroomId"] },
+                                        { $eq: ["$isDeleted", false] },
+
+                                        { $not: { $in: ["$$currentUserId", "$deletedFor"] } },
                                         {
                                             $or: [
                                                 { $eq: ["$isBlocked", false] },
@@ -746,19 +753,18 @@ export const allChatrooms = async (req: any, res: any) => {
     }
 }
 
-export const deleteMessage = async (req: any, res: any) => {
+export const deleteMessage = async (req: any, res: Response, next: NextFunction): Promise<any> => {
     const { id, messageId } = req.params;
+    console.log("req.body===", req.body)
+    const deleteType = req.body.type;
     try {
-        const currentUserId = req.user._id;
+        const currentUserId = req.user?._id;
 
         // find room details
         let chatroom = await fetchChatRoom(id, currentUserId);
 
         if (!chatroom) {
-            return res.status(404).json({
-                success: false,
-                message: IsProduction ? 'The requested content could not be found.' : "Room not found!"
-            });
+            throw new ApiError(404, "Room not found");
         }
 
         const messagePopulate = [
@@ -803,47 +809,76 @@ export const deleteMessage = async (req: any, res: any) => {
             });
         }
 
-        if (messageExist.sender?._id.toString() !== currentUserId.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: IsProduction ? 'Invalid request.' : "Only sender can delete message!"
-            });
+        // if (messageExist.sender?._id.toString() !== currentUserId?.toString()) {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: IsProduction ? 'Invalid request.' : "Only sender can delete message!"
+        //     });
+        // }
+
+        let updateQuery: any = {};
+
+        if (messageExist.sender?._id.toString() === currentUserId?.toString() && deleteType === "everyone") {
+            updateQuery.isDeleted = true;
+        } else {
+            let messageDeletedUsers = messageExist.deletedFor?.map(id => id.toString()) || [];
+
+            if (currentUserId) {
+                messageDeletedUsers.push(currentUserId.toString());
+            }
+
+            messageDeletedUsers = [...new Set(messageDeletedUsers)];
+
+            updateQuery.deletedFor = messageDeletedUsers.map(id => new mongoose.Types.ObjectId(id));
         }
 
-        const deletedMessage = await MessageModel.findOneAndUpdate({ _id: messageId }, { isDeleted: true }, { new: true }).populate(messagePopulate);
+        console.log("updateQuery====", updateQuery);
+
+
+        const deletedMessage = await MessageModel.findOneAndUpdate({ _id: messageId }, updateQuery, { new: true }).populate(messagePopulate).lean();
 
         if (mediaTypes.includes(messageExist.type)) {
             // delete file from path
         }
 
-        const receiverDetail: any = await fetchUser(new mongoose.Types.ObjectId(messageExist.receiver._id));
+        const receiverDetail: IUser | null = await fetchUser(new mongoose.Types.ObjectId(messageExist.receiver._id));
 
 
         // send socket notification to receiver
-        if (checkUserSocketConnected(receiverDetail.socketId)) {
-            io.to(receiverDetail.socketId).emit('message_deleted', {
-                type: 'chat',
-                room: chatroom._id,
-                data: deletedMessage
+        // if (checkUserSocketConnected(receiverDetail?.socketId)) {
+        //     io.to(receiverDetail?.socketId).emit('message_deleted', {
+        //         type: 'chat',
+        //         room: chatroom._id,
+        //         data: deletedMessage
+        //     })
+        // }
+
+        // send socket in roomId when user delete for everyone...
+        if (messageExist.sender?._id.toString() === currentUserId?.toString() && deleteType === "everyone") {
+            io.to(chatroom?._id?.toString()).emit("delete_message", {
+                type: "chat",
+                roomId: chatroom?._id,
+                receiverId: receiverDetail?._id,
+                messageId: messageId
             })
         }
-
+        let data = { ...deletedMessage, isDeleted: true, roomId: chatroom?._id }
 
         return res.status(200).json({
             success: true,
             message: "Message Deleted!",
-            data: deletedMessage
+            data: JSON.parse(JSON.stringify(data))
         });
 
     } catch (error: any) {
         console.error("Delete Message Error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: IsProduction
-                ? "Something went wrong. Please try again later."
-                : `Server Error: ${error.message}`
-        });
+        next(error)
+        // return res.status(500).json({
+        //     success: false,
+        //     message: IsProduction
+        //         ? "Something went wrong. Please try again later."
+        //         : `Server Error: ${error.message}`
+        // });
     }
 }
 
@@ -963,7 +998,7 @@ export const updateChatRoom = async (req: any, res: any) => {
 
         // find room details
         let chatroom = await fetchChatRoom(id, currentUserId);
-        const friend: any = await fetchUser(new mongoose.Types.ObjectId(chatroom.receiver._id));
+        const friend: any = await fetchUser(new mongoose.Types.ObjectId(chatroom?.receiver?._id));
 
         if (!chatroom) {
             return res.status(404).json({

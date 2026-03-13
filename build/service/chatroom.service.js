@@ -42,7 +42,7 @@ const fetchChatRoom = (id, userId) => __awaiter(void 0, void 0, void 0, function
             }
         ]).lean();
         if (chatroom && userId) {
-            chatroom.participants.map((participant) => {
+            chatroom === null || chatroom === void 0 ? void 0 : chatroom.participants.map((participant) => {
                 if (participant._id.toString() === userId.toString()) {
                     chatroom.sender = participant;
                 }

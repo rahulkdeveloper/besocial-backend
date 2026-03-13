@@ -1,7 +1,9 @@
-import UserModel from "../model/user";
-import { verifyJwtToken } from "../helper/utils"
+import UserModel, { IUser } from "../model/user";
+import { verifyJwtToken } from "../helper/utils";
+import { Request, Response, NextFunction } from "express";
+import { AuthUser } from "src/types/user.types";
 
-export const isLoggedIn = async (req: any, res: any,next:any) => {
+export const isLoggedIn = async (req: any, res: Response, next: NextFunction): Promise<any> => {
     try {
 
         let token;
@@ -12,7 +14,7 @@ export const isLoggedIn = async (req: any, res: any,next:any) => {
             token = req.headers.authorization.split(" ")[1];
         }
 
-        
+
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -20,8 +22,8 @@ export const isLoggedIn = async (req: any, res: any,next:any) => {
             })
         }
 
-        let decode: any = await verifyJwtToken(token);
-        
+        let decode:any = await verifyJwtToken(token);
+
         if (!decode) {
             return res.status(401).json({
                 success: false,
@@ -29,7 +31,7 @@ export const isLoggedIn = async (req: any, res: any,next:any) => {
             })
         }
 
-        let userExist = await UserModel.findOne({ _id: decode._id }).lean();
+        let userExist: IUser | null = await UserModel.findOne({ _id: decode._id }).lean();
 
         if (!userExist) {
             return res.status(401).json({
@@ -41,11 +43,11 @@ export const isLoggedIn = async (req: any, res: any,next:any) => {
         req.user = userExist
         return next()
 
-    } catch (error:any) {
+    } catch (error: any) {
         console.log("error in isLoggedIn middleware", error);
         return res.status(error.statusCode || 500).json({
-            success:false,
-            message:"Access Denied"
+            success: false,
+            message: "Access Denied"
         })
 
     }

@@ -380,8 +380,8 @@ const myFriends = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // pipeline.push({ $skip: skip })
         const list = yield Contact_1.default.aggregate(pipeline);
         const result = yield Contact_1.default.aggregate(countPipeline);
-        console.log("result::", result);
-        console.log("list::", list);
+        // console.log("result::", result);
+        // console.log("list::", list)
         const total = ((_a = result[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
         const totalPages = Math.ceil(total / limit);
         if (list.length === 0) {

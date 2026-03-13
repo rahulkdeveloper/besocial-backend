@@ -40,7 +40,7 @@ export const userFieldSelectionModel = {
     email: 1,
     bio: 1,
     status: 1,
-    lastSeen:1
+    lastSeen: 1
 }
 
 export const fileModelFieldSelection = {
@@ -63,7 +63,7 @@ export const modifiyUserDataBasedOnSettings = (userData: any, userProfileSetting
     return userData
 }
 
-export const updateSocketId = async (token: string, socketId = '',status:string,lastSeen:any) => {
+export const updateSocketId = async (token: string, socketId = '', status: string, lastSeen: any) => {
     try {
 
         let decode: any = await verifyJwtToken(token);
@@ -80,15 +80,15 @@ export const updateSocketId = async (token: string, socketId = '',status:string,
             return false
         }
 
-        let updateData:any = {
+        let updateData: any = {
             socketId
         }
 
-        if(status){
+        if (status) {
             updateData.status = status
         }
 
-        if(lastSeen){
+        if (lastSeen) {
             updateData.lastSeen = lastSeen;
         }
 
@@ -101,7 +101,7 @@ export const updateSocketId = async (token: string, socketId = '',status:string,
     }
 }
 
-export const createUserSetting = async (userId: mongoose.ObjectId, data: IUserSetting | {}) => {
+export const createUserSetting = async (userId: Types.ObjectId, data: IUserSetting | {}) => {
     try {
 
         let userSettingObj = {
@@ -125,7 +125,7 @@ export const createUserSetting = async (userId: mongoose.ObjectId, data: IUserSe
     }
 }
 
-export const fetchUser = async (userId: Types.ObjectId | string) => {
+export const fetchUser = async (userId: Types.ObjectId | string | undefined) => {
     try {
 
         const user = await UserModel.findOne(
@@ -194,7 +194,7 @@ export const checkUsersBlockedEachOther = (senderDetail: any, receiverDetail: an
 export const validateUser = async (token: string) => {
     try {
 
-        if(!token){
+        if (!token) {
             return null
         }
         let decode: any = await verifyJwtToken(token);
@@ -204,7 +204,7 @@ export const validateUser = async (token: string) => {
         return user
 
     } catch (error) {
-        if(error instanceof Error){
+        if (error instanceof Error) {
             throw new Error(error.message)
         }
         throw new Error("Unkown error occured");

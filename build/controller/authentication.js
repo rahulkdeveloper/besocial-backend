@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.demo = exports.resetPassword = exports.forgotPassword = exports.login = exports.signUp = void 0;
+exports.resetPassword = exports.forgotPassword = exports.login = exports.signUp = void 0;
 const user_1 = __importDefault(require("../model/user"));
 const utils_1 = require("../helper/utils");
 const moment_1 = __importDefault(require("moment"));
@@ -20,6 +20,7 @@ const email_1 = require("../helper/email");
 const constant_1 = require("../config/constant");
 const user_serivce_1 = require("../service/user.serivce");
 const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("signup payload", req.body);
     let { email, username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
         const checkUserWithEmail = yield user_1.default.findOne({ email }).lean();
@@ -32,14 +33,6 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         if (dateOfBirth) {
             dateOfBirth = (0, moment_1.default)(dateOfBirth, 'DD-MM-YYYY').toDate();
-        }
-        const checkUserWithPhone = yield user_1.default.findOne({ phone }).lean();
-        if (checkUserWithPhone) {
-            return res.status(403).json({
-                success: true,
-                message: "Phone already exist!",
-                data: null
-            });
         }
         const checkUserWithUsername = yield user_1.default.findOne({ username }).lean();
         if (checkUserWithUsername) {
@@ -85,10 +78,12 @@ const signUp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
     catch (error) {
         console.log("error in signUp controller", error);
+        // if (error instanceof Error) {
         return res.status(error.status || 500).json({
             success: false,
             message: error.message || "Some error has occured"
         });
+        // }
     }
 });
 exports.signUp = signUp;
@@ -151,7 +146,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             message: 'Login successful.',
             data: {
                 user: {
-                    id: user._id,
+                    _id: user._id,
                     fullName: user.fullName,
                     email: user.email,
                     phone: user.phone,
@@ -229,7 +224,3 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.resetPassword = resetPassword;
-const demo = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    return res.send("demo");
-});
-exports.demo = demo;

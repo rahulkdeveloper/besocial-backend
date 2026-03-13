@@ -24,7 +24,7 @@ const generateAccessToken = async (useInfo:{_id:mongoose.Types.ObjectId,email:st
 }
 
 export const verifyJwtToken = async(token:string)=>{
-    return await jwt.verify(token,process.env.JWT_SECRET_CODE as string)
+    return await jwt.verify(token,process.env.JWT_SECRET_CODE as string);
 }
 
 const generateToken = async (obj:{_id:mongoose.Types.ObjectId}) => {

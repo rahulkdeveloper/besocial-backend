@@ -12,11 +12,12 @@ const validate = (schema, source = "body") => {
                     message: err.message
                 };
             });
-            return res.status(400).json({
+            res.status(400).json({
                 success: false,
                 message: "Validation failed",
                 errors: formattedErrors[0]
             });
+            return;
         }
         next();
     };

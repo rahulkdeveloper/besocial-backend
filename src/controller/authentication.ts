@@ -1,19 +1,19 @@
 import { Request, Response, NextFunction } from "express";
 import UserModel, { IUser } from "../model/user";
-import { generateAccessToken, hashPassword, comparePassword, generateToken,decode } from "../helper/utils"
+import { generateAccessToken, hashPassword, comparePassword, generateToken, decode } from "../helper/utils"
 import moment from "moment";
-import {sendEmailNormal} from "../helper/email";
-import {emailTemplateName} from "../config/constant";
-import {createUserSetting} from "../service/user.serivce"
+import { sendEmailNormal } from "../helper/email";
+import { emailTemplateName } from "../config/constant";
+import { createUserSetting } from "../service/user.serivce"
 
 
-export const signUp = async (req: any, res: any) => {
-    console.log("signup payload",req.body);
-    
- 
-    let { email,username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
+export const signUp = async (req: Request, res: Response): Promise<any> => {
+    console.log("signup payload", req.body);
+
+
+    let { email, username, fullName, password, dateOfBirth, gender, phone, bio } = req.body;
     try {
-        const checkUserWithEmail = await UserModel.findOne({ email }).lean();
+        const checkUserWithEmail:IUser|null = await UserModel.findOne({ email }).lean();
 
         if (checkUserWithEmail) {
             return res.status(403).json({
@@ -28,7 +28,7 @@ export const signUp = async (req: any, res: any) => {
         }
 
 
-        const checkUserWithUsername = await UserModel.findOne({ username }).lean();
+        const checkUserWithUsername:IUser|null = await UserModel.findOne({ username }).lean();
 
         if (checkUserWithUsername) {
             return res.status(403).json({
@@ -38,7 +38,7 @@ export const signUp = async (req: any, res: any) => {
             });
         }
 
-        let hashPass = await hashPassword(password);
+        let hashPass:string = await hashPassword(password);
 
         const newUserData = {
             email,
@@ -53,7 +53,7 @@ export const signUp = async (req: any, res: any) => {
 
         const newUserRequest = new UserModel(newUserData);
 
-        const newUser: any = await newUserRequest.save();
+        const newUser: IUser = await newUserRequest.save();
 
         if (!newUser) {
             return res.status(500).json({
@@ -64,7 +64,7 @@ export const signUp = async (req: any, res: any) => {
         }
 
         // create user settings
-        const userSettings = await createUserSetting(newUser._id,{});
+        const userSettings = await createUserSetting(newUser._id, {});
 
 
         // generate accessToken;
@@ -75,17 +75,20 @@ export const signUp = async (req: any, res: any) => {
             message: "Signup successfully!",
             data: {
                 user: newUser,
-                userSettings:userSettings,
+                userSettings: userSettings,
                 token
             }
         });
 
-    } catch (error: any) {
+    } catch (error:any) {
         console.log("error in signUp controller", error);
-        return res.status(error.status || 500).json({
-            success: false,
-            message: error.message || "Some error has occured"
-        });
+        // if (error instanceof Error) {
+            return res.status(error.status || 500).json({
+                success: false,
+                message: error.message || "Some error has occured"
+            });
+        // }
+
     }
 };
 
@@ -105,12 +108,12 @@ export const login = async (req: any, res: any) => {
         if (emailOrPhone.includes('@')) {
             // It's an email
             user = await UserModel.findOne({ email: emailOrPhone })
-            .populate("profileImage","url")
-            
+                .populate("profileImage", "url")
+
         } else {
             // It's a phone number
             user = await UserModel.findOne({ phone: emailOrPhone })
-            .populate("profileImage","url")
+                .populate("profileImage", "url")
         }
 
         // If user is not found
@@ -121,7 +124,7 @@ export const login = async (req: any, res: any) => {
             });
         }
 
-        if(user.blockedByAdmin){
+        if (user.blockedByAdmin) {
             return res.status(403).json({
                 success: false,
                 message: 'You have blocked by Admin.',
@@ -164,7 +167,7 @@ export const login = async (req: any, res: any) => {
                     status: "online",
                     gender: user.gender,
                     lastSeen: user.lastSeen,
-                    profilImage:user.profileImage?.url || ''
+                    profilImage: user.profileImage?.url || ''
                 },
                 token,
             },
@@ -195,11 +198,11 @@ export const forgotPassword = async (req: any, res: any) => {
 
         // Send the reset email to the user
         const resetUrl = `${process.env.FRONTEND_FORGOT_PASSWORD_URL}?token=${resetToken}`;
-        
 
-        await sendEmailNormal(email,"Forgot Password link | Besocial",emailTemplateName.forgotPassword,{username:user.username,resetUrl:resetUrl})
 
-        return res.status(200).json({ message: 'Password reset email sent successfully.',resetToken });
+        await sendEmailNormal(email, "Forgot Password link | Besocial", emailTemplateName.forgotPassword, { username: user.username, resetUrl: resetUrl })
+
+        return res.status(200).json({ message: 'Password reset email sent successfully.', resetToken });
     } catch (error) {
         console.error('Error in forgotPassword controller:', error);
         return res.status(500).json({ message: 'Something went wrong, please try again later.' });
@@ -208,29 +211,29 @@ export const forgotPassword = async (req: any, res: any) => {
 
 export const resetPassword = async (req: any, res: any) => {
     try {
-        const { token, newPassword,confirmPassword } = req.body;
+        const { token, newPassword, confirmPassword } = req.body;
 
-        if(newPassword!==confirmPassword){
+        if (newPassword !== confirmPassword) {
             return res.status(400).json({ message: 'New password and confirm password are not equal' });
         }
 
         // Verify the reset token
-        const decoded:any =await decode(token);
+        const decoded: any = await decode(token);
 
-        console.log("decoded::",decoded);
-        
+        console.log("decoded::", decoded);
+
 
         if (!decoded) {
             return res.status(400).json({ message: 'Invalid or expired reset token.' });
         }
 
         // Find the user by the decoded userId
-        const user:IUser|null = await UserModel.findById(decoded.id);
+        const user: IUser | null = await UserModel.findById(decoded.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found.' });
         }
 
-        if(user.resetPasswordToken !== token){
+        if (user.resetPasswordToken !== token) {
             return res.status(400).json({ message: 'Invalid reset password token' });
         }
 
@@ -248,10 +251,6 @@ export const resetPassword = async (req: any, res: any) => {
         return res.status(500).json({ message: 'Something went wrong, please try again later.' });
     }
 };
-
-export const demo = async (req: any, res: any) => {
-    return res.send("demo")
-}
 
 
 

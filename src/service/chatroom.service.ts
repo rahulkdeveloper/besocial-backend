@@ -1,13 +1,15 @@
-import mongoose from "mongoose";
-import ChatRoomModel from "src/model/Room";
-import {userFieldSelectionModel,fileModelFieldSelection} from './user.serivce'
+import mongoose, { Types } from "mongoose";
+import ChatRoomModel, { IRoom } from "src/model/Room";
+import { userFieldSelectionModel, fileModelFieldSelection } from './user.serivce'
+import { ChatroomWithUsers } from "src/types/chatroom.types";
+import { IUser } from "src/model/user";
 
-export const fetchChatRoom = async (id: mongoose.ObjectId, userId?: mongoose.ObjectId) => {
+export const fetchChatRoom = async (id: string, userId?: Types.ObjectId): Promise<ChatroomWithUsers | null> => {
     console.log("insdie the fetchChatRoom", id, userId);
 
     try {
 
-        let chatroom: any = await ChatRoomModel.findOne(
+        let chatroom = await ChatRoomModel.findOne(
             { _id: id, participants: userId }
         )
             .populate([
@@ -21,20 +23,20 @@ export const fetchChatRoom = async (id: mongoose.ObjectId, userId?: mongoose.Obj
                 },
                 {
                     path: "blockStatus.userId",
-                    select:userFieldSelectionModel
+                    select: userFieldSelectionModel
                 },
                 {
                     path: "blockStatus.blockedUserId",
-                    select:userFieldSelectionModel
+                    select: userFieldSelectionModel
                 },
                 {
-                    path:'messageClearStatus.userId',
-                    select:userFieldSelectionModel
+                    path: 'messageClearStatus.userId',
+                    select: userFieldSelectionModel
                 }
-            ]).lean()
+            ]).lean<ChatroomWithUsers>()
 
         if (chatroom && userId) {
-            chatroom.participants.map((participant: any) => {
+            chatroom?.participants.map((participant) => {
                 if (participant._id.toString() === userId.toString()) {
                     chatroom.sender = participant
                 }
