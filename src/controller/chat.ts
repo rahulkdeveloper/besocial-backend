@@ -18,7 +18,7 @@ const IsProduction = process.env.NODE_ENV as string === 'production';
 export const sendMessage = async (req: any, res: any) => {
     const { id } = req.params;
     const currentUserId = req.user._id;
-    const { message = '', type = 'text', file, fileText = '' } = req.body;
+    const { message = '', type = 'text', file, fileText = '', replyTo } = req.body;
     try {
 
         // find room details
@@ -80,6 +80,17 @@ export const sendMessage = async (req: any, res: any) => {
         if (file && fileText) {
             messageData.fileText = fileText
         }
+        if (replyTo) {
+            // check replyTo message exist...
+            const replyToMessage = await MessageModel.findOne({ _id: replyTo }).lean();
+            if (!replyToMessage) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid Request!"
+                });
+            }
+            messageData.replyTo = replyTo;
+        }
 
         // create new message;
         let newMessage: any = await MessageModel.create(messageData);
@@ -103,14 +114,6 @@ export const sendMessage = async (req: any, res: any) => {
             });
         }
 
-        // send socket notification to receiver
-        // if (!isBlocked && checkUserSocketConnected(receiverDetail.socketId)) {
-        //     io.to(receiverDetail.socketId).emit('message_received', {
-        //         type: 'chat',
-        //         room: chatroom._id,
-        //         data: newMessage
-        //     })
-        // }
 
         if (!isBlocked) {
             // console.log("sending message socket=====", chatroom._id)
@@ -123,13 +126,13 @@ export const sendMessage = async (req: any, res: any) => {
 
 
             // console.log("sending unread_messages===========>",receiverDetail._id.toString())
-            io.to(receiverDetail._id.toString()).emit('unread_messages', {
-                type: 'chat',
-                room: chatroom._id,
-                receiverId: receiverDetail._id,
-                data: newMessage,
+            // io.to(receiverDetail._id.toString()).emit('unread_messages', {
+            //     type: 'chat',
+            //     room: chatroom._id,
+            //     receiverId: receiverDetail._id,
+            //     data: newMessage,
 
-            })
+            // })
 
 
         }
@@ -246,6 +249,20 @@ export const chatroomById = async (req: any, res: any) => {
                     populate: {
                         path: "profileImage",
                         select: fileModelFieldSelection
+                    }
+                },
+                {
+                    path: "replyTo",
+                    select: {
+                        _id: 1,
+                        sender: 1,
+                        receiver: 1,
+                        content: 1,
+                        fileText: 1
+                    },
+                    populate: {
+                        path: "sender",
+                        select: userFieldSelectionModel
                     }
                 },
                 {
@@ -886,7 +903,7 @@ export const editMessage = async (req: any, res: any) => {
     const { id, messageId } = req.params;
     try {
         const currentUserId = req.user._id;
-        const { message } = req.body;
+        const { message, type = "text" } = req.body;
 
         // find room details
         let chatroom = await fetchChatRoom(id, currentUserId);
@@ -939,12 +956,13 @@ export const editMessage = async (req: any, res: any) => {
                 message: IsProduction ? 'The requested content could not be found.' : "Message not found!"
             });
         }
-        if (messageExist.type !== 'text') {
-            return res.status(403).json({
-                success: false,
-                message: IsProduction ? 'Invalid request.' : "Only text message can be edit!"
-            });
-        }
+        //wrong
+        // if (messageExist.type !== 'text') {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: IsProduction ? 'Invalid request.' : "Only text message can be edit!"
+        //     });
+        // }
 
         if (messageExist.sender?._id.toString() !== currentUserId.toString()) {
             return res.status(403).json({
@@ -953,29 +971,65 @@ export const editMessage = async (req: any, res: any) => {
             });
         }
 
-        const updatedMessage = await MessageModel.findOneAndUpdate({ _id: messageId }, { isEdited: true, content: message }, { new: true }).populate(messagePopulate);
-
-        if (mediaTypes.includes(messageExist.type)) {
-            // delete file from path
+        let updatedData: any = {
+            isEdited: true
         }
+        if (type === "text") {
+            updatedData.content = message;
+        }
+        else {
+            updatedData.fileText = message;
+        }
+
+        console.log("updatedData===", updatedData)
+
+        const updatedMessage: any = await MessageModel.findOneAndUpdate({ _id: messageId }, updatedData, { new: true }).populate(messagePopulate).lean();
+
+        // if (mediaTypes.includes(messageExist.type)) {
+        //     // delete file from path
+        // }
 
         const receiverDetail: any = await fetchUser(new mongoose.Types.ObjectId(messageExist.receiver._id));
 
 
         // send socket notification to receiver
-        if (checkUserSocketConnected(receiverDetail.socketId)) {
-            io.to(receiverDetail.socketId).emit('message_edited', {
-                type: 'chat',
-                room: chatroom._id,
-                data: updatedMessage
+        // if (checkUserSocketConnected(receiverDetail.socketId)) {
+        //     io.to(receiverDetail.socketId).emit('message_edited', {
+        //         type: 'chat',
+        //         room: chatroom._id,
+        //         data: updatedMessage
+        //     })
+        // }
+
+        let messageUpdateField: any = {};
+        if (type === 'text') {
+            messageUpdateField.content = updatedMessage.content
+        }
+        else {
+            messageUpdateField.fileText = updatedMessage.fileText
+        }
+
+        console.log("messageUpdateField====", messageUpdateField)
+
+        if (messageExist.sender?._id.toString() === currentUserId?.toString()) {
+            io.to(chatroom?._id?.toString()).emit("edit_message", {
+                type: "chat",
+                roomId: chatroom?._id,
+                receiverId: receiverDetail?._id,
+                messageId: messageId,
+                editMessage: {
+                    type,
+                    ...messageUpdateField
+                }
             })
         }
 
+        let data = { ...updatedMessage, roomId: chatroom?._id }
 
         return res.status(200).json({
             success: true,
-            message: "Message updated!",
-            data: updatedMessage
+            message: "Message edited!",
+            data: data
         });
 
     } catch (error: any) {

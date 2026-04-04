@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import MessageModel from "src/model/Message";
-import {userFieldSelectionModel,fileModelFieldSelection} from './user.serivce'
+import { userFieldSelectionModel, fileModelFieldSelection } from './user.serivce'
 
 export const messageFieldSelection = {
     _id: 1,
@@ -8,7 +8,7 @@ export const messageFieldSelection = {
     type: 1,
     seen: 1,
     isDeleted: 1,
-    createdAt:1
+    createdAt: 1
 }
 
 export const messageDetail = async (id: mongoose.ObjectId) => {
@@ -29,7 +29,21 @@ export const messageDetail = async (id: mongoose.ObjectId) => {
             })
             .populate({
                 path: 'seenBy',
-                select:userFieldSelectionModel
+                select: userFieldSelectionModel
+            })
+            .populate({
+                path: "replyTo",
+                select: {
+                    _id: 1,
+                    sender: 1,
+                    receiver: 1,
+                    content: 1,
+                    fileText: 1
+                },
+                populate: {
+                    path: "sender",
+                    select: userFieldSelectionModel
+                }
             })
 
         return message

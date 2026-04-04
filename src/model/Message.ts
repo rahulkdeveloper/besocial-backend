@@ -13,6 +13,7 @@ export interface IMessage extends Document {
     seen: boolean;
     seenBy: mongoose.Types.ObjectId[];
     deletedFor: mongoose.Types.ObjectId[];
+    replyTo: mongoose.Types.ObjectId;
     isDeleted: boolean;
     isEdited: boolean;
     isBlocked: boolean;
@@ -46,6 +47,10 @@ const MessageSchema: Schema<IMessage> = new Schema(
             type: String,
             enum: ["text", "audio", "video", "image", "file"],
             default: "text"
+        },
+        replyTo: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Message',
         },
         seenBy: [{
             type: mongoose.Schema.Types.ObjectId,

@@ -5,7 +5,6 @@ import { ChatroomWithUsers } from "src/types/chatroom.types";
 import { IUser } from "src/model/user";
 
 export const fetchChatRoom = async (id: string, userId?: Types.ObjectId): Promise<ChatroomWithUsers | null> => {
-    console.log("insdie the fetchChatRoom", id, userId);
 
     try {
 
