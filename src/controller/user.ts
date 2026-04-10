@@ -3,7 +3,10 @@ import UserModel from "../model/user";
 import mongoose from "mongoose";
 import { userFieldSelection } from "../service/user.serivce";
 import UserSettingModel from "src/model/UserSettings";
-import { createUserSetting, modifiyUserDataBasedOnSettings } from "../service/user.serivce"
+import { createUserSetting, modifiyUserDataBasedOnSettings } from "../service/user.serivce";
+// import { getRedisClient } from "src/config/redis";
+
+// const client = getRedisClient();
 
 export const userList = async (req: any, res: any) => {
 
@@ -132,45 +135,75 @@ export const userList = async (req: any, res: any) => {
             },
             {
                 $addFields: {
-                  contactStatus: {
-                    $let: {
-                      vars: {
-                        contact: { $arrayElemAt: ["$userContacts", 0] }
-                      },
-                      in: {
-                        $switch: {
-                          branches: [
-                            {
-                              case: { $eq: ["$$contact.status", "accepted"] },
-                              then: "friend"
+                    contactStatus: {
+                        $let: {
+                            vars: {
+                                contact: { $arrayElemAt: ["$userContacts", 0] }
                             },
-                            {
-                              case: {
-                                $and: [
-                                  { $eq: ["$$contact.status", "pending"] },
-                                  { $eq: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
-                                ]
-                              },
-                              then: "pending"
-                            },
-                            {
-                              case: {
-                                $and: [
-                                  { $eq: ["$$contact.status", "pending"] },
-                                  { $ne: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
-                                ]
-                              },
-                              then: "Received"
+                            in: {
+                                $switch: {
+                                    branches: [
+                                        {
+                                            case: { $eq: ["$$contact.status", "accepted"] },
+                                            then: "friend"
+                                        },
+                                        {
+                                            case: {
+                                                $and: [
+                                                    { $eq: ["$$contact.status", "pending"] },
+                                                    { $eq: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
+                                                ]
+                                            },
+                                            then: "pending"
+                                        },
+                                        {
+                                            case: {
+                                                $and: [
+                                                    { $eq: ["$$contact.status", "pending"] },
+                                                    { $ne: ["$$contact.sender", new mongoose.Types.ObjectId(userId)] }
+                                                ]
+                                            },
+                                            then: "Received"
+                                        }
+                                    ],
+                                    default: "unknown"
+                                }
                             }
-                          ],
-                          default: "unknown"
                         }
-                      }
                     }
-                  }
                 }
-              }
-              ,
+            },
+            {
+                $lookup: {
+                    from: "chatrooms",
+                    let: {
+                        currentUserId: new mongoose.Types.ObjectId(userId),
+                        otherUserId: "$_id",
+                        contactStatus:"$contactStatus"
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and:[
+                                        {$eq:["$$contactStatus","friend"]},
+                                        {$in:["$$currentUserId","$participants"]},
+                                        {$in:["$$otherUserId","$participants"]}
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "chatroom"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$chatroom",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            
             {
                 $lookup: {
                     from: "usersettings",
@@ -202,7 +235,7 @@ export const userList = async (req: any, res: any) => {
         pipeline.push({ $skip: skip }, { $limit: limit });
 
         pipeline.push({
-            $project: { ...userFieldSelection,userContacts: { $arrayElemAt: ["$userContacts", 0] }, contactStatus: 1 }
+            $project: { ...userFieldSelection, userContacts: { $arrayElemAt: ["$userContacts", 0] }, contactStatus: 1,chatroomId:"$chatroom._id" }
         })
 
 
@@ -284,6 +317,19 @@ export const userProfile = async (req: any, res: any) => {
     try {
         const currentUserId = req.user._id;
 
+        // const cacheKey: string = `profile:${currentUserId}`;
+
+        // const cachedData = await client.get(cacheKey);
+
+        // if (cachedData) {
+        //     const data = JSON.parse(cachedData);
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: "User Fetched!",
+        //         data: data
+        //     });
+        // }
+
         let userFieldsSelection = { ...userFieldSelection, profileImage: 1 }
 
         let user: any = await UserModel.findOne({ _id: currentUserId }, userFieldsSelection)
@@ -301,7 +347,11 @@ export const userProfile = async (req: any, res: any) => {
             });
         }
 
-        user.profileSettings = profileSettings || {}
+        user.profileSettings = profileSettings || {};
+
+        // await client.set(cacheKey, JSON.stringify(user), {
+        //     EX: 900,
+        // });
 
         return res.status(200).json({
             success: true,

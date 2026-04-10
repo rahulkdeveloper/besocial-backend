@@ -30,7 +30,7 @@ const comparePassword = (password, hash) => __awaiter(void 0, void 0, void 0, fu
 });
 exports.comparePassword = comparePassword;
 const generateAccessToken = (useInfo) => __awaiter(void 0, void 0, void 0, function* () {
-    return jsonwebtoken_1.default.sign(useInfo, process.env.JWT_SECRET_CODE);
+    return jsonwebtoken_1.default.sign(useInfo, process.env.JWT_SECRET_CODE, { expiresIn: "7d" });
 });
 exports.generateAccessToken = generateAccessToken;
 const verifyJwtToken = (token) => __awaiter(void 0, void 0, void 0, function* () {

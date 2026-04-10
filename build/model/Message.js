@@ -61,7 +61,16 @@ const MessageSchema = new mongoose_1.Schema({
         enum: ["text", "audio", "video", "image", "file"],
         default: "text"
     },
+    replyTo: {
+        type: mongoose_1.default.Schema.Types.ObjectId,
+        ref: 'Message',
+    },
     seenBy: [{
+            type: mongoose_1.default.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true,
+        }],
+    deletedFor: [{
             type: mongoose_1.default.Schema.Types.ObjectId,
             ref: 'User',
             required: true,

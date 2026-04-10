@@ -16,7 +16,6 @@ exports.fetchChatRoom = void 0;
 const Room_1 = __importDefault(require("src/model/Room"));
 const user_serivce_1 = require("./user.serivce");
 const fetchChatRoom = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("insdie the fetchChatRoom", id, userId);
     try {
         let chatroom = yield Room_1.default.findOne({ _id: id, participants: userId })
             .populate([

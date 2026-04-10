@@ -72,7 +72,7 @@ const GroupChatSchema = new mongoose_1.Schema({
                 type: Date,
             }
         }],
-    deletedBy: [{
+    deletedFor: [{
             type: mongoose_1.default.Schema.Types.ObjectId,
             ref: 'User',
         }],
@@ -92,7 +92,7 @@ const GroupChatSchema = new mongoose_1.Schema({
         type: Boolean,
         default: true
     },
-    isDeleted: {
+    isDeletedForEveryone: {
         type: Boolean,
         default: false
     }

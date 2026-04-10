@@ -215,7 +215,7 @@ export const listContactRequest = async (req: any, res: any) => {
 
     let { status = "pending", limit, page } = req.query;
     try {
-        console.log("status::",status)
+        console.log("status::", status)
 
         const currentUserId = req.user._id;
 
@@ -239,12 +239,12 @@ export const listContactRequest = async (req: any, res: any) => {
                     email: 1,
                     username: 1,
                     fullName: 1,
-                    bio:1,
-                    profileImage:1
+                    bio: 1,
+                    profileImage: 1
                 },
                 populate: {
                     path: "profileImage",
-                    select:fileModelFieldSelection,
+                    select: fileModelFieldSelection,
                 }
             })
 
@@ -326,6 +326,7 @@ export const myFriends = async (req: any, res: any) => {
                     status: 'accepted',
                 }
             },
+            
             {
                 $lookup: {
                     from: "users",
@@ -363,6 +364,34 @@ export const myFriends = async (req: any, res: any) => {
                             else: "$sender"
                         }
                     }
+                }
+            },
+            {
+                $lookup: {
+                    from: "chatrooms",
+                    let: {
+                        currentUserId: new mongoose.Types.ObjectId(currentUserId),
+                        otherUserId: "$friend._id",
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $in: ["$$currentUserId", "$participants"] },
+                                        { $in: ["$$otherUserId", "$participants"] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "chatroom"
+                }
+            },
+             {
+                $unwind: {
+                    path: "$chatroom",
+                    preserveNullAndEmptyArrays: true
                 }
             },
             {
@@ -427,6 +456,7 @@ export const myFriends = async (req: any, res: any) => {
                     // receiver: userFieldSelectionModel,
                     status: 1,
                     friend: { ...userFieldSelectionModel, profileImage: fileModelFieldSelection },
+                    chatroomId:"$chatroom._id"
                     // friendImage:1,
                     // profileSetting:1
                 }

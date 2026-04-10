@@ -18,7 +18,6 @@ const Message_1 = __importDefault(require("src/model/Message"));
 const user_serivce_1 = require("../service/user.serivce");
 const chatroom_service_1 = require("../service/chatroom.service");
 const app_1 = require("../app");
-const socket_1 = require("../service/socket");
 const chatMessage_service_1 = require("../service/chatMessage.service");
 const mongoose_1 = __importDefault(require("mongoose"));
 const constant_1 = require("../config/constant");
@@ -31,7 +30,7 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     var _a;
     const { id } = req.params;
     const currentUserId = req.user._id;
-    const { message = '', type = 'text', file, fileText = '' } = req.body;
+    const { message = '', type = 'text', file, fileText = '', replyTo } = req.body;
     try {
         // find room details
         const chatroom = yield (0, chatroom_service_1.fetchChatRoom)(id, currentUserId);
@@ -80,6 +79,17 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (file && fileText) {
             messageData.fileText = fileText;
         }
+        if (replyTo) {
+            // check replyTo message exist...
+            const replyToMessage = yield Message_1.default.findOne({ _id: replyTo }).lean();
+            if (!replyToMessage) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid Request!"
+                });
+            }
+            messageData.replyTo = replyTo;
+        }
         // create new message;
         let newMessage = yield Message_1.default.create(messageData);
         // check someone deleted his chatroom now active;
@@ -93,14 +103,6 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: "Some error has occured, Please try again!"
             });
         }
-        // send socket notification to receiver
-        // if (!isBlocked && checkUserSocketConnected(receiverDetail.socketId)) {
-        //     io.to(receiverDetail.socketId).emit('message_received', {
-        //         type: 'chat',
-        //         room: chatroom._id,
-        //         data: newMessage
-        //     })
-        // }
         if (!isBlocked) {
             // console.log("sending message socket=====", chatroom._id)
             app_1.io.to(chatroom._id.toString()).emit('message_received', {
@@ -110,12 +112,12 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 data: newMessage
             });
             // console.log("sending unread_messages===========>",receiverDetail._id.toString())
-            app_1.io.to(receiverDetail._id.toString()).emit('unread_messages', {
-                type: 'chat',
-                room: chatroom._id,
-                receiverId: receiverDetail._id,
-                data: newMessage,
-            });
+            // io.to(receiverDetail._id.toString()).emit('unread_messages', {
+            //     type: 'chat',
+            //     room: chatroom._id,
+            //     receiverId: receiverDetail._id,
+            //     data: newMessage,
+            // })
         }
         return res.status(201).json({
             success: true,
@@ -183,7 +185,7 @@ const chatroomById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         //     chatRoomId: chatroom._id, receiver: currentUserId, isBlocked: false
         // }, { $set: { seen: true } })
         // all message of chatrooms
-        const messages = yield Message_1.default.find(Object.assign({ chatRoomId: chatroom._id, $or: [
+        const messages = yield Message_1.default.find(Object.assign({ chatRoomId: chatroom._id, isDeleted: false, deletedFor: { $nin: [currentUserId] }, $or: [
                 { isBlocked: false },
                 { isBlocked: true, sender: currentUserId },
             ] }, (ChatCleared && { createdAt: { $gt: chatClearedDate } }))).limit(limit).skip(skip).sort({ createdAt: -1 })
@@ -202,6 +204,20 @@ const chatroomById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 populate: {
                     path: "profileImage",
                     select: user_serivce_1.fileModelFieldSelection
+                }
+            },
+            {
+                path: "replyTo",
+                select: {
+                    _id: 1,
+                    sender: 1,
+                    receiver: 1,
+                    content: 1,
+                    fileText: 1
+                },
+                populate: {
+                    path: "sender",
+                    select: user_serivce_1.userFieldSelectionModel
                 }
             },
             {
@@ -372,6 +388,8 @@ const allChatrooms = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                                 $expr: {
                                     $and: [
                                         { $eq: ["$chatRoomId", "$$chatroomId"] },
+                                        { $eq: ["$isDeleted", false] },
+                                        { $not: { $in: ["$$currentUserId", "$deletedFor"] } },
                                         {
                                             $or: [
                                                 { $eq: ["$isBlocked", false] },
@@ -673,8 +691,10 @@ const allChatrooms = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.allChatrooms = allChatrooms;
 const deleteMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b, _c, _d, _e;
     const { id, messageId } = req.params;
+    console.log("req.body===", req.body);
+    const deleteType = req.body.type;
     try {
         const currentUserId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
         // find room details
@@ -721,13 +741,26 @@ const deleteMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 message: IsProduction ? 'The requested content could not be found.' : "Message not found!"
             });
         }
-        if (((_b = messageExist.sender) === null || _b === void 0 ? void 0 : _b._id.toString()) !== (currentUserId === null || currentUserId === void 0 ? void 0 : currentUserId.toString())) {
-            return res.status(403).json({
-                success: false,
-                message: IsProduction ? 'Invalid request.' : "Only sender can delete message!"
-            });
+        // if (messageExist.sender?._id.toString() !== currentUserId?.toString()) {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: IsProduction ? 'Invalid request.' : "Only sender can delete message!"
+        //     });
+        // }
+        let updateQuery = {};
+        if (((_b = messageExist.sender) === null || _b === void 0 ? void 0 : _b._id.toString()) === (currentUserId === null || currentUserId === void 0 ? void 0 : currentUserId.toString()) && deleteType === "everyone") {
+            updateQuery.isDeleted = true;
         }
-        const deletedMessage = yield Message_1.default.findOneAndUpdate({ _id: messageId }, { isDeleted: true }, { new: true }).populate(messagePopulate);
+        else {
+            let messageDeletedUsers = ((_c = messageExist.deletedFor) === null || _c === void 0 ? void 0 : _c.map(id => id.toString())) || [];
+            if (currentUserId) {
+                messageDeletedUsers.push(currentUserId.toString());
+            }
+            messageDeletedUsers = [...new Set(messageDeletedUsers)];
+            updateQuery.deletedFor = messageDeletedUsers.map(id => new mongoose_1.default.Types.ObjectId(id));
+        }
+        console.log("updateQuery====", updateQuery);
+        const deletedMessage = yield Message_1.default.findOneAndUpdate({ _id: messageId }, updateQuery, { new: true }).populate(messagePopulate).lean();
         if (constant_1.mediaTypes.includes(messageExist.type)) {
             // delete file from path
         }
@@ -740,17 +773,20 @@ const deleteMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         //         data: deletedMessage
         //     })
         // }
-        // send socket in roomId...
-        app_1.io.to((_c = chatroom === null || chatroom === void 0 ? void 0 : chatroom._id) === null || _c === void 0 ? void 0 : _c.toString()).emit("delete_message", {
-            type: "chat",
-            roomd: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id,
-            receiverId: receiverDetail === null || receiverDetail === void 0 ? void 0 : receiverDetail._id,
-            messageId: messageId
-        });
+        // send socket in roomId when user delete for everyone...
+        if (((_d = messageExist.sender) === null || _d === void 0 ? void 0 : _d._id.toString()) === (currentUserId === null || currentUserId === void 0 ? void 0 : currentUserId.toString()) && deleteType === "everyone") {
+            app_1.io.to((_e = chatroom === null || chatroom === void 0 ? void 0 : chatroom._id) === null || _e === void 0 ? void 0 : _e.toString()).emit("delete_message", {
+                type: "chat",
+                roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id,
+                receiverId: receiverDetail === null || receiverDetail === void 0 ? void 0 : receiverDetail._id,
+                messageId: messageId
+            });
+        }
+        let data = Object.assign(Object.assign({}, deletedMessage), { isDeleted: true, roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id });
         return res.status(200).json({
             success: true,
             message: "Message Deleted!",
-            data: Object.assign(Object.assign({}, deletedMessage), { roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id })
+            data: JSON.parse(JSON.stringify(data))
         });
     }
     catch (error) {
@@ -766,11 +802,11 @@ const deleteMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
 });
 exports.deleteMessage = deleteMessage;
 const editMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     const { id, messageId } = req.params;
     try {
         const currentUserId = req.user._id;
-        const { message } = req.body;
+        const { message, type = "text" } = req.body;
         // find room details
         let chatroom = yield (0, chatroom_service_1.fetchChatRoom)(id, currentUserId);
         if (!chatroom) {
@@ -818,35 +854,64 @@ const editMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: IsProduction ? 'The requested content could not be found.' : "Message not found!"
             });
         }
-        if (messageExist.type !== 'text') {
-            return res.status(403).json({
-                success: false,
-                message: IsProduction ? 'Invalid request.' : "Only text message can be edit!"
-            });
-        }
+        //wrong
+        // if (messageExist.type !== 'text') {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: IsProduction ? 'Invalid request.' : "Only text message can be edit!"
+        //     });
+        // }
         if (((_a = messageExist.sender) === null || _a === void 0 ? void 0 : _a._id.toString()) !== currentUserId.toString()) {
             return res.status(403).json({
                 success: false,
                 message: IsProduction ? 'Invalid request.' : "Only sender can edit message!"
             });
         }
-        const updatedMessage = yield Message_1.default.findOneAndUpdate({ _id: messageId }, { isEdited: true, content: message }, { new: true }).populate(messagePopulate);
-        if (constant_1.mediaTypes.includes(messageExist.type)) {
-            // delete file from path
+        let updatedData = {
+            isEdited: true
+        };
+        if (type === "text") {
+            updatedData.content = message;
         }
+        else {
+            updatedData.fileText = message;
+        }
+        console.log("updatedData===", updatedData);
+        const updatedMessage = yield Message_1.default.findOneAndUpdate({ _id: messageId }, updatedData, { new: true }).populate(messagePopulate).lean();
+        // if (mediaTypes.includes(messageExist.type)) {
+        //     // delete file from path
+        // }
         const receiverDetail = yield (0, user_serivce_1.fetchUser)(new mongoose_1.default.Types.ObjectId(messageExist.receiver._id));
         // send socket notification to receiver
-        if ((0, socket_1.checkUserSocketConnected)(receiverDetail.socketId)) {
-            app_1.io.to(receiverDetail.socketId).emit('message_edited', {
-                type: 'chat',
-                room: chatroom._id,
-                data: updatedMessage
+        // if (checkUserSocketConnected(receiverDetail.socketId)) {
+        //     io.to(receiverDetail.socketId).emit('message_edited', {
+        //         type: 'chat',
+        //         room: chatroom._id,
+        //         data: updatedMessage
+        //     })
+        // }
+        let messageUpdateField = {};
+        if (type === 'text') {
+            messageUpdateField.content = updatedMessage.content;
+        }
+        else {
+            messageUpdateField.fileText = updatedMessage.fileText;
+        }
+        console.log("messageUpdateField====", messageUpdateField);
+        if (((_b = messageExist.sender) === null || _b === void 0 ? void 0 : _b._id.toString()) === (currentUserId === null || currentUserId === void 0 ? void 0 : currentUserId.toString())) {
+            app_1.io.to((_c = chatroom === null || chatroom === void 0 ? void 0 : chatroom._id) === null || _c === void 0 ? void 0 : _c.toString()).emit("edit_message", {
+                type: "chat",
+                roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id,
+                receiverId: receiverDetail === null || receiverDetail === void 0 ? void 0 : receiverDetail._id,
+                messageId: messageId,
+                editMessage: Object.assign({ type }, messageUpdateField)
             });
         }
+        let data = Object.assign(Object.assign({}, updatedMessage), { roomId: chatroom === null || chatroom === void 0 ? void 0 : chatroom._id });
         return res.status(200).json({
             success: true,
-            message: "Message updated!",
-            data: updatedMessage
+            message: "Message edited!",
+            data: data
         });
     }
     catch (error) {

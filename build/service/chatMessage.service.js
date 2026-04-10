@@ -41,6 +41,20 @@ const messageDetail = (id) => __awaiter(void 0, void 0, void 0, function* () {
             .populate({
             path: 'seenBy',
             select: user_serivce_1.userFieldSelectionModel
+        })
+            .populate({
+            path: "replyTo",
+            select: {
+                _id: 1,
+                sender: 1,
+                receiver: 1,
+                content: 1,
+                fileText: 1
+            },
+            populate: {
+                path: "sender",
+                select: user_serivce_1.userFieldSelectionModel
+            }
         });
         return message;
     }
