@@ -2,7 +2,7 @@ import { number } from "joi";
 import UserModel from "../model/user";
 import mongoose from "mongoose";
 import { userFieldSelection } from "../service/user.serivce";
-import UserSettingModel from "src/model/UserSettings";
+import UserSettingModel from "../model/UserSettings";
 import { createUserSetting, modifiyUserDataBasedOnSettings } from "../service/user.serivce";
 // import { getRedisClient } from "src/config/redis";
 

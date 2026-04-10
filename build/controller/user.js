@@ -16,7 +16,7 @@ exports.updateProfileSetting = exports.updateProfile = exports.userProfile = exp
 const user_1 = __importDefault(require("../model/user"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const user_serivce_1 = require("../service/user.serivce");
-const UserSettings_1 = __importDefault(require("src/model/UserSettings"));
+const UserSettings_1 = __importDefault(require("../model/UserSettings"));
 const user_serivce_2 = require("../service/user.serivce");
 // import { getRedisClient } from "src/config/redis";
 // const client = getRedisClient();
