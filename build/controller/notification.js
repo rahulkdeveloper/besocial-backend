@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.list = void 0;
-const Notification_1 = __importDefault(require("src/model/Notification"));
+const Notification_1 = __importDefault(require("../model/Notification"));
 const user_serivce_1 = require("../service/user.serivce");
 const list = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     let { status = "pending", limit, page } = req.query;

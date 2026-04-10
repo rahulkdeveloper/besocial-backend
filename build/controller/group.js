@@ -13,10 +13,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteGroupByMember = exports.clearMessage = exports.favouriteAndUnFavourite = exports.updateChatRoom = exports.sendMessage = exports.groupChatById = exports.addMembers = exports.createGroup = void 0;
-const GroupChat_1 = __importDefault(require("src/model/GroupChat"));
-const Room_1 = __importDefault(require("src/model/Room"));
+const GroupChat_1 = __importDefault(require("../model/GroupChat"));
+const Room_1 = __importDefault(require("../model/Room"));
 const chatMessage_service_1 = require("../service/chatMessage.service");
-const Message_1 = __importDefault(require("src/model/Message"));
+const Message_1 = __importDefault(require("../model/Message"));
 const user_serivce_1 = require("../service/user.serivce");
 const app_1 = require("../app");
 const socket_1 = require("../service/socket");

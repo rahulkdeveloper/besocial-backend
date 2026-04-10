@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchChatRoom = void 0;
-const Room_1 = __importDefault(require("src/model/Room"));
+const Room_1 = __importDefault(require("../model/Room"));
 const user_serivce_1 = require("./user.serivce");
 const fetchChatRoom = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
     try {

@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.messageDetail = exports.messageFieldSelection = void 0;
-const Message_1 = __importDefault(require("src/model/Message"));
+const Message_1 = __importDefault(require("../model/Message"));
 const user_serivce_1 = require("./user.serivce");
 exports.messageFieldSelection = {
     _id: 1,
