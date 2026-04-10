@@ -30,6 +30,7 @@ const user_1 = __importDefault(require("./model/user"));
 const Room_1 = __importDefault(require("./model/Room"));
 const redis_1 = require("./config/redis");
 (0, connection_1.default)();
+(0, redis_1.connectRedis)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.default.Server(server, {
     cors: {
@@ -38,77 +39,6 @@ const io = new socket_io_1.default.Server(server, {
     }
 });
 exports.io = io;
-(0, redis_1.connectRedis)();
-// io.on('connection', async (socket: any) => {
-//     const token = socket.handshake.auth.token;
-//     const socketId = socket.id;
-//     console.log("socketId", socketId);
-//     if (socketId && token) {
-//         // save to user document
-//         await updateSocketId(token, socketId)
-//     }
-//     socket.join(socketId)
-//     socket.on('chat message', (msg: string) => {
-//         io.emit('chat message', msg);
-//     });
-//     // socket.on("chatroom_join", async (data: { userId: string, chatroomdId: string }) => {
-//     //     if (data.userId && data.chatroomdId) {
-//     //         if (!activeChatrooms.has(data.userId)) {
-//     //             activeChatrooms.set(data.userId, [data.chatroomdId])
-//     //         }
-//     //         else {
-//     //             let rooms = activeChatrooms.get(data.userId);
-//     //             rooms.push(data.chatroomdId);
-//     //             rooms = [...new Set(rooms)]
-//     //             activeChatrooms.set(data.userId, rooms)
-//     //         }
-//     //     }
-//     // })
-//     // socket.on("chatroom_left", async (data: { userId: string, chatroomdId: string }) => {
-//     //     if (data.userId && data.chatroomdId) {
-//     //         if (activeChatrooms.has(data.userId)) {
-//     //             let rooms = activeChatrooms.get(data.userId);
-//     //             rooms = rooms.filter((i: any) => i.toString() !== data.chatroomdId.toString());
-//     //             activeChatrooms.set(data.userId, rooms)
-//     //         }
-//     //     }
-//     // })
-//     socket.on('message_seen', async (data: any) => {
-//         const { roomId, seenBy, unreadMessageIds } = data;
-//         if (!Array.isArray(unreadMessageIds) || unreadMessageIds.length < 1) return;
-//         const roomDetail = await ChatRoomModel.findOne({ _id: roomId }).populate('participants', '_id socketId').lean();
-//         let receiverDetail: any = roomDetail?.participants.find((participant: any) => {
-//             if (participant._id.toString() !== seenBy?.toString()) {
-//                 return participant
-//             }
-//         });
-//         // update message db to mark seen
-//         await MessageModel.updateMany(
-//             {
-//                 _id: { $in: unreadMessageIds },
-//                 sender: { $ne: seenBy },
-//                 seen: false
-//             },
-//             {
-//                 $set: { seen: true }
-//             }
-//         )
-//         // send socket notification to receiver
-//         if (receiverDetail && receiverDetail.socketId && checkUserSocketConnected(receiverDetail.socketId)) {
-//             socket.to(receiverDetail.socketId).emit('message_seen_notify', {
-//                 roomId,
-//                 seenBy,
-//                 messageIds: unreadMessageIds
-//             })
-//         }
-//     })
-//     socket.on('disconnect', async () => {
-//         console.log('User disconnected');
-//         if (token) {
-//             await updateSocketId(token, '')
-//         }
-//     });
-// });
 io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
     const token = socket.handshake.auth.token;
     console.log("Connected:", socket.id);

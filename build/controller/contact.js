@@ -312,6 +312,34 @@ const myFriends = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 }
             },
             {
+                $lookup: {
+                    from: "chatrooms",
+                    let: {
+                        currentUserId: new mongoose_1.default.Types.ObjectId(currentUserId),
+                        otherUserId: "$friend._id",
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $in: ["$$currentUserId", "$participants"] },
+                                        { $in: ["$$otherUserId", "$participants"] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "chatroom"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$chatroom",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
                 $match: searchQuery
             },
             {
@@ -371,6 +399,7 @@ const myFriends = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     // receiver: userFieldSelectionModel,
                     status: 1,
                     friend: Object.assign(Object.assign({}, user_serivce_1.userFieldSelectionModel), { profileImage: user_serivce_1.fileModelFieldSelection }),
+                    chatroomId: "$chatroom._id"
                     // friendImage:1,
                     // profileSetting:1
                 }

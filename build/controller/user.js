@@ -18,8 +18,8 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const user_serivce_1 = require("../service/user.serivce");
 const UserSettings_1 = __importDefault(require("src/model/UserSettings"));
 const user_serivce_2 = require("../service/user.serivce");
-const redis_1 = require("src/config/redis");
-const client = (0, redis_1.getRedisClient)();
+// import { getRedisClient } from "src/config/redis";
+// const client = getRedisClient();
 const userList = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -162,6 +162,34 @@ const userList = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             }
         }, {
             $lookup: {
+                from: "chatrooms",
+                let: {
+                    currentUserId: new mongoose_1.default.Types.ObjectId(userId),
+                    otherUserId: "$_id",
+                    contactStatus: "$contactStatus"
+                },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$$contactStatus", "friend"] },
+                                    { $in: ["$$currentUserId", "$participants"] },
+                                    { $in: ["$$otherUserId", "$participants"] }
+                                ]
+                            }
+                        }
+                    }
+                ],
+                as: "chatroom"
+            }
+        }, {
+            $unwind: {
+                path: "$chatroom",
+                preserveNullAndEmptyArrays: true
+            }
+        }, {
+            $lookup: {
                 from: "usersettings",
                 localField: "_id",
                 foreignField: "user",
@@ -183,7 +211,7 @@ const userList = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         pipeline.push({ $sort: { "createdAt": 1 } });
         pipeline.push({ $skip: skip }, { $limit: limit });
         pipeline.push({
-            $project: Object.assign(Object.assign({}, user_serivce_1.userFieldSelection), { userContacts: { $arrayElemAt: ["$userContacts", 0] }, contactStatus: 1 })
+            $project: Object.assign(Object.assign({}, user_serivce_1.userFieldSelection), { userContacts: { $arrayElemAt: ["$userContacts", 0] }, contactStatus: 1, chatroomId: "$chatroom._id" })
         });
         const [users, totalResut] = yield Promise.all([
             user_1.default.aggregate(pipeline),
@@ -249,16 +277,16 @@ exports.viewUserProfile = viewUserProfile;
 const userProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const currentUserId = req.user._id;
-        const cacheKey = `profile:${currentUserId}`;
-        const cachedData = yield client.get(cacheKey);
-        if (cachedData) {
-            const data = JSON.parse(cachedData);
-            return res.status(200).json({
-                success: true,
-                message: "User Fetched!",
-                data: data
-            });
-        }
+        // const cacheKey: string = `profile:${currentUserId}`;
+        // const cachedData = await client.get(cacheKey);
+        // if (cachedData) {
+        //     const data = JSON.parse(cachedData);
+        //     return res.status(200).json({
+        //         success: true,
+        //         message: "User Fetched!",
+        //         data: data
+        //     });
+        // }
         let userFieldsSelection = Object.assign(Object.assign({}, user_serivce_1.userFieldSelection), { profileImage: 1 });
         let user = yield user_1.default.findOne({ _id: currentUserId }, userFieldsSelection)
             .populate("profileImage", "path url name alt")
@@ -273,9 +301,9 @@ const userProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         user.profileSettings = profileSettings || {};
-        yield client.set(cacheKey, JSON.stringify(user), {
-            EX: 900,
-        });
+        // await client.set(cacheKey, JSON.stringify(user), {
+        //     EX: 900,
+        // });
         return res.status(200).json({
             success: true,
             message: "User Fetched!",
