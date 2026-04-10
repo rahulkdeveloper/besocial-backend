@@ -1,6 +1,6 @@
 import UserModel from "../model/user";
 import { verifyJwtToken } from "../helper/utils";
-import UserSettingModel, { IUserSetting } from "src/model/UserSettings";
+import UserSettingModel, { IUserSetting } from "../model/UserSettings";
 import mongoose, { Types } from "mongoose";
 
 export const userFieldSelection = {

@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateUser = exports.checkUsersBlockedEachOther = exports.fetchUser = exports.createUserSetting = exports.updateSocketId = exports.modifiyUserDataBasedOnSettings = exports.fileModelFieldSelection = exports.userFieldSelectionModel = exports.userFieldSelectionContactModel = exports.userFieldSelection = void 0;
 const user_1 = __importDefault(require("../model/user"));
 const utils_1 = require("../helper/utils");
-const UserSettings_1 = __importDefault(require("src/model/UserSettings"));
+const UserSettings_1 = __importDefault(require("../model/UserSettings"));
 exports.userFieldSelection = {
     _id: 1,
     fullName: 1,
