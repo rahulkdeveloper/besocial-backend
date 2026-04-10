@@ -116,7 +116,7 @@ export const sendMessage = async (req: any, res: any) => {
 
 
         if (!isBlocked) {
-            // console.log("sending message socket=====", chatroom._id)
+            console.log("sending message socket=====", chatroom._id)
             io.to(chatroom._id.toString()).emit('message_received', {
                 type: 'chat',
                 room: chatroom._id,

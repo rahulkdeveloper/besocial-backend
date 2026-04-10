@@ -104,7 +104,7 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         if (!isBlocked) {
-            // console.log("sending message socket=====", chatroom._id)
+            console.log("sending message socket=====", chatroom._id);
             app_1.io.to(chatroom._id.toString()).emit('message_received', {
                 type: 'chat',
                 room: chatroom._id,
