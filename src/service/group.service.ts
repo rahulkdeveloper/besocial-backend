@@ -1,4 +1,4 @@
-import GroupChatModel from "src/model/GroupChat";
+import GroupChatModel from "../model/GroupChat";
 import mongoose, { Types } from "mongoose";
 import {userFieldSelectionModel,fileModelFieldSelection} from './user.serivce'
 

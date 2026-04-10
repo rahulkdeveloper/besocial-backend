@@ -1,5 +1,5 @@
-import ChatRoomModel from "src/model/Room";
-import MessageModel from "src/model/Message";
+import ChatRoomModel from "../model/Room";
+import MessageModel from "../model/Message";
 import { fetchUser, checkUsersBlockedEachOther, userFieldSelectionModel, fileModelFieldSelection } from '../service/user.serivce';
 import { fetchChatRoom } from '../service/chatroom.service';
 import { io } from "../app";
@@ -7,8 +7,8 @@ import { checkUserSocketConnected } from '../service/socket'
 import { messageDetail, messageFieldSelection } from '../service/chatMessage.service';
 import mongoose, { Types } from "mongoose";
 import { mediaTypes } from '../config/constant'
-import UserModel, { IUser } from "src/model/user";
-import GroupChatModel from "src/model/GroupChat";
+import UserModel, { IUser } from "../model/user";
+import GroupChatModel from "../model/GroupChat";
 import { getRedisClient } from '../config/redis'
 import { ApiError } from "../errors/appError";
 import { Request, Response, NextFunction } from "express";

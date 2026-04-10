@@ -1,4 +1,4 @@
-import MediaModel from "src/model/Media";
+import MediaModel from "../model/Media";
 import cloudinary from 'cloudinary';
 import fs from "fs";
 

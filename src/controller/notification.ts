@@ -1,4 +1,4 @@
-import NotificationModel from "src/model/Notification";
+import NotificationModel from "../model/Notification";
 import {userFieldSelectionContactModel} from "../service/user.serivce"
 
 export const list = async (req: any, res: any) => {

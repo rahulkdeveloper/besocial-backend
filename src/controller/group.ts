@@ -1,8 +1,8 @@
-import GroupChatModel from "src/model/GroupChat";
-import UserModel from "src/model/user";
-import ChatRoomModel from "src/model/Room";
+import GroupChatModel from "../model/GroupChat";
+import UserModel from "../model/user";
+import ChatRoomModel from "../model/Room";
 import { messageDetail, messageFieldSelection } from '../service/chatMessage.service';
-import MessageModel from "src/model/Message";
+import MessageModel from "../model/Message";
 import { fetchUser, checkUsersBlockedEachOther, userFieldSelectionModel, fileModelFieldSelection } from '../service/user.serivce';
 import { io } from "../app";
 import { checkUserSocketConnected } from '../service/socket'

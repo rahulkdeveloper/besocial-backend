@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import MessageModel from "src/model/Message";
+import MessageModel from "../model/Message";
 import { userFieldSelectionModel, fileModelFieldSelection } from './user.serivce'
 
 export const messageFieldSelection = {

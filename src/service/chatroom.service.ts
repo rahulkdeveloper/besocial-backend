@@ -1,8 +1,8 @@
 import mongoose, { Types } from "mongoose";
-import ChatRoomModel, { IRoom } from "src/model/Room";
+import ChatRoomModel, { IRoom } from "../model/Room";
 import { userFieldSelectionModel, fileModelFieldSelection } from './user.serivce'
-import { ChatroomWithUsers } from "src/types/chatroom.types";
-import { IUser } from "src/model/user";
+import { ChatroomWithUsers } from "../types/chatroom.types";
+import { IUser } from "../model/user";
 
 export const fetchChatRoom = async (id: string, userId?: Types.ObjectId): Promise<ChatroomWithUsers | null> => {
 
