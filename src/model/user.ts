@@ -125,7 +125,7 @@ const UserSchema: Schema<IUser> = new Schema(
   }
 );
 
-UserSchema.index({ email: 1 });
+// UserSchema.index({ email: 1 });
 UserSchema.index({ phone: 1 });
 UserSchema.index({username:1});
 UserSchema.index({fullName:1});

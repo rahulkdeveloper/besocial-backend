@@ -143,7 +143,7 @@ io.on('connection', async (socket: any) => {
 });
 
 
-app.use(cors())
+app.use(cors({origin:"*"}))
 
 app.use(morgan('dev'));
 

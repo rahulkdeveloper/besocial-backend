@@ -126,7 +126,7 @@ const UserSchema = new mongoose_1.Schema({
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
 });
-UserSchema.index({ email: 1 });
+// UserSchema.index({ email: 1 });
 UserSchema.index({ phone: 1 });
 UserSchema.index({ username: 1 });
 UserSchema.index({ fullName: 1 });
